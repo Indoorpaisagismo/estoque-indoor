@@ -89,7 +89,7 @@ function App() {
   const [itens, setItens] = useState(savedItens ? JSON.parse(savedItens) : ESTOQUE_INICIAL);
   const [movimentos, setMovimentos] = useState(savedMovs ? JSON.parse(savedMovs) : []);
   const [requisicoes, setRequisicoes] = useState(savedReqs ? JSON.parse(savedReqs) : []);
-  const [novaReq, setNovaReq] = useState({nome:'',categoria:'insumos',descricao:'',link:'',urgencia:'normal'});
+  const [novaReq, setNovaReq] = useState({nome:'',categoria:'insumos',descricao:'',link:'',urgencia:'normal',solicitante:''});
   const [aba, setAba] = useState('dashboard');
   const [catFiltro, setCatFiltro] = useState('todas');
   const [alertaCat, setAlertaCat] = useState('todas');
@@ -107,6 +107,7 @@ function App() {
 
   function enviarRequisicao() {
     if (!novaReq.nome.trim()) return alert('Informe o item solicitado.');
+    if (!novaReq.solicitante.trim()) return alert('Informe seu nome.');
     if (!novaReq.descricao.trim()) return alert('Informe por que precisa do item.');
     const req = {
       id: Date.now(),
@@ -118,7 +119,7 @@ function App() {
     const novas = [req, ...requisicoes];
     setRequisicoes(novas);
     salvarStorage(undefined, undefined, novas);
-    setNovaReq({nome:'',categoria:'insumos',descricao:'',link:'',urgencia:'normal'});
+    setNovaReq({nome:'',categoria:'insumos',descricao:'',link:'',urgencia:'normal',solicitante:''});
     showToast('Requisição enviada ✓');
   }
 
@@ -245,7 +246,7 @@ function App() {
                     <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:8}}>
                       <div style={{flex:1,marginRight:8}}>
                         <div style={{fontSize:14,fontWeight:600,color:'#2C3E2D'}}>{r.nome}</div>
-                        <div style={{fontSize:11,color:'#6B7B6C',marginTop:2}}>{r.data} {r.hora} · <span style={S.badge(r.categoria)}>{CATEGORIAS[r.categoria]?.emoji} {CATEGORIAS[r.categoria]?.label}</span></div>
+                        <div style={{fontSize:11,color:'#6B7B6C',marginTop:2}}>{r.data} {r.hora} · <span style={S.badge(r.categoria)}>{CATEGORIAS[r.categoria]?.emoji} {CATEGORIAS[r.categoria]?.label}</span>{r.solicitante?` · 👤 ${r.solicitante}`:""}</div>
                       </div>
                       {r.urgencia==='urgente' && <span style={{background:'#FFF3E0',color:'#E67E22',fontSize:10,fontWeight:700,padding:'2px 8px',borderRadius:20,whiteSpace:'nowrap'}}>🔥 URGENTE</span>}
                     </div>
@@ -410,6 +411,8 @@ function App() {
             {/* Formulário de nova requisição */}
             <div style={S.card()}>
               <div style={{fontSize:15,fontWeight:600,color:'#2C3E2D',marginBottom:16}}>📋 Nova requisição</div>
+              <label style={S.label}>SEU NOME *</label>
+              <input style={{...S.inp,marginBottom:12}} placeholder="Ex: João Silva" value={novaReq.solicitante} onChange={e=>setNovaReq(n=>({...n,solicitante:e.target.value}))} />
               <label style={S.label}>O QUE PRECISA? *</label>
               <input style={{...S.inp,marginBottom:12}} placeholder="Ex: Fertilizante NPK 10-10-10" value={novaReq.nome} onChange={e=>setNovaReq(n=>({...n,nome:e.target.value}))} />
               <label style={S.label}>CATEGORIA</label>
@@ -440,7 +443,7 @@ function App() {
                     <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:6}}>
                       <div style={{flex:1,marginRight:8}}>
                         <div style={{fontSize:14,fontWeight:600,color:'#2C3E2D'}}>{r.nome}</div>
-                        <div style={{fontSize:11,color:'#6B7B6C',marginTop:2}}>{r.data} {r.hora} · <span style={S.badge(r.categoria)}>{CATEGORIAS[r.categoria]?.emoji} {CATEGORIAS[r.categoria]?.label}</span></div>
+                        <div style={{fontSize:11,color:'#6B7B6C',marginTop:2}}>{r.data} {r.hora} · <span style={S.badge(r.categoria)}>{CATEGORIAS[r.categoria]?.emoji} {CATEGORIAS[r.categoria]?.label}</span>{r.solicitante?` · 👤 ${r.solicitante}`:""}</div>
                       </div>
                       <span style={{
                         fontSize:10,fontWeight:700,padding:'3px 10px',borderRadius:20,whiteSpace:'nowrap',
