@@ -85,8 +85,11 @@ const S = {
 function App() {
   const savedItens = localStorage.getItem('indoor_estoque_itens');
   const savedMovs = localStorage.getItem('indoor_estoque_movs');
+  const savedReqs = localStorage.getItem('indoor_estoque_reqs');
   const [itens, setItens] = useState(savedItens ? JSON.parse(savedItens) : ESTOQUE_INICIAL);
   const [movimentos, setMovimentos] = useState(savedMovs ? JSON.parse(savedMovs) : []);
+  const [requisicoes, setRequisicoes] = useState(savedReqs ? JSON.parse(savedReqs) : []);
+  const [novaReq, setNovaReq] = useState({nome:'',categoria:'insumos',descricao:'',link:'',urgencia:'normal'});
   const [aba, setAba] = useState('dashboard');
   const [catFiltro, setCatFiltro] = useState('todas');
   const [alertaCat, setAlertaCat] = useState('todas');
@@ -96,10 +99,37 @@ function App() {
   const [novoItem, setNovoItem] = useState({nome:'',categoria:'insumos',unidade:'UN',qtd:0,minimo:0,preco:0});
   const [toast, setToast] = useState('');
 
-  function salvarStorage(novosItens, novosMov) {
+  function salvarStorage(novosItens, novosMov, novasReqs) {
     localStorage.setItem('indoor_estoque_itens', JSON.stringify(novosItens||itens));
     if (novosMov) localStorage.setItem('indoor_estoque_movs', JSON.stringify(novosMov));
+    if (novasReqs !== undefined) localStorage.setItem('indoor_estoque_reqs', JSON.stringify(novasReqs));
   }
+
+  function enviarRequisicao() {
+    if (!novaReq.nome.trim()) return alert('Informe o item solicitado.');
+    if (!novaReq.descricao.trim()) return alert('Informe por que precisa do item.');
+    const req = {
+      id: Date.now(),
+      ...novaReq,
+      data: new Date().toLocaleDateString('pt-BR'),
+      hora: new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}),
+      status: 'pendente'
+    };
+    const novas = [req, ...requisicoes];
+    setRequisicoes(novas);
+    salvarStorage(undefined, undefined, novas);
+    setNovaReq({nome:'',categoria:'insumos',descricao:'',link:'',urgencia:'normal'});
+    showToast('Requisição enviada ✓');
+  }
+
+  function atualizarStatusReq(id, status) {
+    const novas = requisicoes.map(r=>r.id===id?{...r,status}:r);
+    setRequisicoes(novas);
+    salvarStorage(undefined, undefined, novas);
+    showToast(status==='aprovada'?'Requisição aprovada ✓':'Requisição recusada');
+  }
+
+  const reqPendentes = requisicoes.filter(r=>r.status==='pendente');
 
   function showToast(msg) {
     setToast(msg);
@@ -157,9 +187,9 @@ function App() {
         </div>
         <div style={S.hdrSub}>Controle de Estoque</div>
         <div style={S.nav}>
-          {['dashboard','estoque','alertas','movimentos'].map(a=>(
+          {['dashboard','estoque','alertas','movimentos','requisicao'].map(a=>(
             <button key={a} style={S.nb(aba===a)} onClick={()=>setAba(a)}>
-              {a==='dashboard'?'Dashboard':a==='estoque'?'Estoque':a==='alertas'?`Alertas${alertas.length>0?` (${alertas.length})`:''}`:a==='movimentos'?'Histórico':''}
+              {a==='dashboard'?'Dashboard':a==='estoque'?'Estoque':a==='alertas'?`Alertas${alertas.length>0?` (${alertas.length})`:''}`:a==='movimentos'?'Histórico':'Requisições'}
             </button>
           ))}
         </div>
@@ -183,9 +213,14 @@ function App() {
               {Object.entries(CATEGORIAS).map(([key,cat])=>{
                 const itCat = itens.filter(i=>i.categoria===key);
                 const alts = alertas.filter(i=>i.categoria===key);
+                const handleClick = () => {
+                  if (key==='insumos') { setAba('estoque'); setCatFiltro('insumos'); }
+                  else if (alts.length>0) { setAba('alertas'); setAlertaCat(key); }
+                  else { setAba('estoque'); setCatFiltro(key); }
+                };
                 return (
-                  <div key={key} style={{...S.card(), borderLeft:`3px solid`, borderLeftColor:cat.cor, cursor:alts.length>0?'pointer':'default'}}
-                    onClick={()=>alts.length>0&&(setAba('alertas'),setAlertaCat(key))}>
+                  <div key={key} style={{...S.card(), borderLeft:`3px solid`, borderLeftColor:cat.cor, cursor:'pointer'}}
+                    onClick={handleClick}>
                     <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:8}}>
                       <span style={{fontSize:20}}>{cat.emoji}</span>
                       <span style={S.badge(key)}>{cat.label}</span>
@@ -201,7 +236,30 @@ function App() {
               })}
             </div>
 
-            {/* Alertas recentes */}
+            {/* Requisições pendentes */}
+            {reqPendentes.length>0 && (
+              <>
+                <span style={S.stit}>Requisições pendentes</span>
+                {reqPendentes.slice(0,3).map(r=>(
+                  <div key={r.id} style={{...S.card(`1px solid ${r.urgencia==='urgente'?'#E67E22':'#E8E0D0'}`),borderLeft:`3px solid ${r.urgencia==='urgente'?'#E67E22':'#4A6741'}`}}>
+                    <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:8}}>
+                      <div style={{flex:1,marginRight:8}}>
+                        <div style={{fontSize:14,fontWeight:600,color:'#2C3E2D'}}>{r.nome}</div>
+                        <div style={{fontSize:11,color:'#6B7B6C',marginTop:2}}>{r.data} {r.hora} · <span style={S.badge(r.categoria)}>{CATEGORIAS[r.categoria]?.emoji} {CATEGORIAS[r.categoria]?.label}</span></div>
+                      </div>
+                      {r.urgencia==='urgente' && <span style={{background:'#FFF3E0',color:'#E67E22',fontSize:10,fontWeight:700,padding:'2px 8px',borderRadius:20,whiteSpace:'nowrap'}}>🔥 URGENTE</span>}
+                    </div>
+                    <div style={{fontSize:13,color:'#6B7B6C',marginBottom:10}}>{r.descricao}</div>
+                    {r.link && <a href={r.link} target="_blank" rel="noreferrer" style={{fontSize:12,color:'#4A6741',display:'block',marginBottom:10,wordBreak:'break-all'}}>🔗 Ver produto</a>}
+                    <div style={{display:'flex',gap:8}}>
+                      <button style={{...S.btnEntrada,flex:1}} onClick={()=>atualizarStatusReq(r.id,'aprovada')}>✓ Aprovar</button>
+                      <button style={{...S.btnSaida,flex:1}} onClick={()=>atualizarStatusReq(r.id,'recusada')}>✗ Recusar</button>
+                    </div>
+                  </div>
+                ))}
+                {reqPendentes.length>3 && <div style={{textAlign:'center',fontSize:12,color:'#6B7B6C',marginTop:4,cursor:'pointer'}} onClick={()=>setAba('requisicao')}>Ver todas as {reqPendentes.length} requisições →</div>}
+              </>
+            )}
             {alertas.length>0 && (
               <>
                 <span style={S.stit}>Itens para repor</span>
@@ -346,7 +404,68 @@ function App() {
         )}
       </div>
 
-      {/* MODAL MOVIMENTO */}
+        {/* REQUISIÇÃO */}
+        {aba==='requisicao' && (
+          <>
+            {/* Formulário de nova requisição */}
+            <div style={S.card()}>
+              <div style={{fontSize:15,fontWeight:600,color:'#2C3E2D',marginBottom:16}}>📋 Nova requisição</div>
+              <label style={S.label}>O QUE PRECISA? *</label>
+              <input style={{...S.inp,marginBottom:12}} placeholder="Ex: Fertilizante NPK 10-10-10" value={novaReq.nome} onChange={e=>setNovaReq(n=>({...n,nome:e.target.value}))} />
+              <label style={S.label}>CATEGORIA</label>
+              <select style={{...S.sel,marginBottom:12}} value={novaReq.categoria} onChange={e=>setNovaReq(n=>({...n,categoria:e.target.value}))}>
+                {Object.entries(CATEGORIAS).map(([k,v])=><option key={k} value={k}>{v.emoji} {v.label}</option>)}
+              </select>
+              <label style={S.label}>POR QUE PRECISA? *</label>
+              <textarea style={{...S.inp,marginBottom:12,resize:'vertical',minHeight:70}} placeholder="Ex: Acabou o estoque, preciso para a obra da Residência Silva" value={novaReq.descricao} onChange={e=>setNovaReq(n=>({...n,descricao:e.target.value}))} />
+              <label style={S.label}>🔗 LINK DO PRODUTO (opcional)</label>
+              <input style={{...S.inp,marginBottom:12}} placeholder="Cole aqui o link do produto (Mercado Livre, Amazon, etc.)" value={novaReq.link} onChange={e=>setNovaReq(n=>({...n,link:e.target.value}))} />
+              <label style={S.label}>URGÊNCIA</label>
+              <div style={{display:'flex',gap:8,marginBottom:16}}>
+                {['normal','urgente'].map(u=>(
+                  <button key={u} style={{flex:1,padding:12,background:novaReq.urgencia===u?(u==='urgente'?'#E67E22':'#2C3E2D'):'#F5F0E8',color:novaReq.urgencia===u?'#FDFCF9':'#1E2B1F',border:'none',borderRadius:10,fontFamily:'DM Sans,sans-serif',fontSize:14,fontWeight:500,cursor:'pointer'}} onClick={()=>setNovaReq(n=>({...n,urgencia:u}))}>
+                    {u==='normal'?'Normal':'🔥 Urgente'}
+                  </button>
+                ))}
+              </div>
+              <button style={S.btnPrim} onClick={enviarRequisicao}>Enviar requisição</button>
+            </div>
+
+            {/* Histórico de requisições */}
+            {requisicoes.length>0 && (
+              <>
+                <span style={{...S.stit,marginTop:8}}>Histórico</span>
+                {requisicoes.map(r=>(
+                  <div key={r.id} style={{...S.card(),borderLeft:`3px solid ${r.status==='aprovada'?'#27AE60':r.status==='recusada'?'#C0392B':r.urgencia==='urgente'?'#E67E22':'#4A6741'}`}}>
+                    <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:6}}>
+                      <div style={{flex:1,marginRight:8}}>
+                        <div style={{fontSize:14,fontWeight:600,color:'#2C3E2D'}}>{r.nome}</div>
+                        <div style={{fontSize:11,color:'#6B7B6C',marginTop:2}}>{r.data} {r.hora} · <span style={S.badge(r.categoria)}>{CATEGORIAS[r.categoria]?.emoji} {CATEGORIAS[r.categoria]?.label}</span></div>
+                      </div>
+                      <span style={{
+                        fontSize:10,fontWeight:700,padding:'3px 10px',borderRadius:20,whiteSpace:'nowrap',
+                        background:r.status==='aprovada'?'#E8F4E8':r.status==='recusada'?'#FDEDEC':r.urgencia==='urgente'?'#FFF3E0':'#F5F0E8',
+                        color:r.status==='aprovada'?'#27AE60':r.status==='recusada'?'#C0392B':r.urgencia==='urgente'?'#E67E22':'#6B7B6C'
+                      }}>
+                        {r.status==='aprovada'?'✓ APROVADA':r.status==='recusada'?'✗ RECUSADA':r.urgencia==='urgente'?'🔥 URGENTE':'PENDENTE'}
+                      </span>
+                    </div>
+                    <div style={{fontSize:13,color:'#6B7B6C',marginBottom:r.link?8:0}}>{r.descricao}</div>
+                    {r.link && <a href={r.link} target="_blank" rel="noreferrer" style={{fontSize:12,color:'#4A6741',display:'block',wordBreak:'break-all'}}>🔗 Ver produto</a>}
+                    {r.status==='pendente' && (
+                      <div style={{display:'flex',gap:8,marginTop:10}}>
+                        <button style={{...S.btnEntrada,flex:1}} onClick={()=>atualizarStatusReq(r.id,'aprovada')}>✓ Aprovar</button>
+                        <button style={{...S.btnSaida,flex:1}} onClick={()=>atualizarStatusReq(r.id,'recusada')}>✗ Recusar</button>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </>
+            )}
+          </>
+        )}
+
+        {/* MODAL MOVIMENTO */}
       {modal?.tipo==='movimento' && (
         <div style={S.overlay} onClick={()=>setModal(null)}>
           <div style={S.modal} onClick={e=>e.stopPropagation()}>
