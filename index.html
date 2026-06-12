@@ -7,6 +7,8 @@
 <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
 <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
 <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap');
   :root {
@@ -23,7 +25,19 @@
 <body>
 <div id="root"></div>
 <script type="text/babel">
-const { useState, useMemo } = React;
+const { useState, useMemo, useEffect } = React;
+
+// ===== FIREBASE =====
+const firebaseConfig = {
+  apiKey: "AIzaSyCe5c7z-CBesIw3hR9TOBl8EYUdEtkl0XY",
+  authDomain: "indoor-hub.firebaseapp.com",
+  projectId: "indoor-hub",
+  storageBucket: "indoor-hub.firebasestorage.app",
+  messagingSenderId: "1042863056704",
+  appId: "1:1042863056704:web:58598bf4aea53d2b01fca5"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
 
 const EMAILJS_SERVICE_ID = "SEU_SERVICE_ID";
 const EMAILJS_TEMPLATE_ID = "SEU_TEMPLATE_ID";
@@ -83,12 +97,55 @@ const S = {
 };
 
 function App() {
-  const savedItens = localStorage.getItem('indoor_estoque_itens');
-  const savedMovs = localStorage.getItem('indoor_estoque_movs');
-  const savedReqs = localStorage.getItem('indoor_estoque_reqs');
-  const [itens, setItens] = useState(savedItens ? JSON.parse(savedItens) : ESTOQUE_INICIAL);
-  const [movimentos, setMovimentos] = useState(savedMovs ? JSON.parse(savedMovs) : []);
-  const [requisicoes, setRequisicoes] = useState(savedReqs ? JSON.parse(savedReqs) : []);
+  const [itens, setItens] = useState([]);
+  const [movimentos, setMovimentos] = useState([]);
+  const [requisicoes, setRequisicoes] = useState([]);
+  const [carregando, setCarregando] = useState(true);
+
+  // ===== FIREBASE: listeners em tempo real =====
+  useEffect(() => {
+    // Itens — se a coleção estiver vazia, popular com ESTOQUE_INICIAL
+    const unsubItens = db.collection('estoque_itens').onSnapshot(snap => {
+      if (snap.empty) {
+        // Primeira vez: popular o Firebase com os itens iniciais
+        const batch = db.batch();
+        ESTOQUE_INICIAL.forEach(item => {
+          batch.set(db.collection('estoque_itens').doc(String(item.id)), item);
+        });
+        batch.commit();
+      } else {
+        const arr = snap.docs.map(d => d.data());
+        arr.sort((a,b) => a.nome.localeCompare(b.nome));
+        setItens(arr);
+      }
+      setCarregando(false);
+    });
+
+    const unsubMovs = db.collection('estoque_movimentos').onSnapshot(snap => {
+      const arr = snap.docs.map(d => d.data());
+      arr.sort((a,b) => b.id - a.id);
+      setMovimentos(arr);
+    });
+
+    const unsubReqs = db.collection('estoque_requisicoes').onSnapshot(snap => {
+      const arr = snap.docs.map(d => d.data());
+      arr.sort((a,b) => b.id - a.id);
+      setRequisicoes(arr);
+    });
+
+    return () => { unsubItens(); unsubMovs(); unsubReqs(); };
+  }, []);
+
+  // ===== FIREBASE: funções de salvar =====
+  function fbSalvarItem(item) {
+    db.collection('estoque_itens').doc(String(item.id)).set(item).catch(e=>console.warn(e));
+  }
+  function fbSalvarMovimento(mov) {
+    db.collection('estoque_movimentos').doc(String(mov.id)).set(mov).catch(e=>console.warn(e));
+  }
+  function fbSalvarRequisicao(req) {
+    db.collection('estoque_requisicoes').doc(String(req.id)).set(req).catch(e=>console.warn(e));
+  }
   const [novaReq, setNovaReq] = useState({solicitante:'',descricao:'',link:'',urgencia:'normal'});
   const [reqItens, setReqItens] = useState([]); // lista de itens da requisição atual
   const [itemTemp, setItemTemp] = useState({nome:'',qtd:1});
@@ -100,12 +157,6 @@ function App() {
   const [form, setForm] = useState({});
   const [novoItem, setNovoItem] = useState({nome:'',categoria:'insumos',unidade:'UN',qtd:0,minimo:0,preco:0});
   const [toast, setToast] = useState('');
-
-  function salvarStorage(novosItens, novosMov, novasReqs) {
-    localStorage.setItem('indoor_estoque_itens', JSON.stringify(novosItens||itens));
-    if (novosMov) localStorage.setItem('indoor_estoque_movs', JSON.stringify(novosMov));
-    if (novasReqs !== undefined) localStorage.setItem('indoor_estoque_reqs', JSON.stringify(novasReqs));
-  }
 
   function adicionarItemReq() {
     if (!itemTemp.nome.trim()) return alert('Informe o item.');
@@ -132,9 +183,7 @@ function App() {
       hora: new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}),
       status: 'pendente'
     };
-    const novas = [req, ...requisicoes];
-    setRequisicoes(novas);
-    salvarStorage(undefined, undefined, novas);
+    fbSalvarRequisicao(req);
     setNovaReq({solicitante:'',descricao:'',link:'',urgencia:'normal'});
     setReqItens([]);
     setItemTemp({nome:'',qtd:1});
@@ -142,9 +191,8 @@ function App() {
   }
 
   function atualizarStatusReq(id, status) {
-    const novas = requisicoes.map(r=>r.id===id?{...r,status}:r);
-    setRequisicoes(novas);
-    salvarStorage(undefined, undefined, novas);
+    const req = requisicoes.find(r=>r.id===id);
+    if (req) fbSalvarRequisicao({...req, status});
     showToast(status==='aprovada'?'Requisição aprovada ✓':'Requisição recusada');
   }
 
@@ -170,12 +218,10 @@ function App() {
     if (!tipo||!q||!responsavel) return alert('Preencha todos os campos obrigatórios.');
     if (tipo==='saida'&&q>modal.item.qtd) return alert('Quantidade insuficiente em estoque.');
     const novaQtd = tipo==='entrada' ? modal.item.qtd+q : modal.item.qtd-q;
-    const novosItens = itens.map(i=>i.id===modal.item.id?{...i,qtd:novaQtd}:i);
+    const itemAtualizado = {...modal.item, qtd:novaQtd};
     const novoMov = { id:Date.now(), itemId:modal.item.id, tipo, qtd:q, responsavel, obs:obs||'', data:new Date().toLocaleDateString('pt-BR') };
-    const novosMov = [novoMov, ...movimentos];
-    setItens(novosItens);
-    setMovimentos(novosMov);
-    salvarStorage(novosItens, novosMov);
+    fbSalvarItem(itemAtualizado);
+    fbSalvarMovimento(novoMov);
     setModal(null);
     setForm({});
     showToast(tipo==='entrada'?'Entrada registrada ✓':'Saída registrada ✓');
@@ -184,15 +230,22 @@ function App() {
   function adicionarItem() {
     if (!novoItem.nome.trim()) return alert('Informe o nome do item.');
     const novo = {...novoItem, id:Date.now(), qtd:Number(novoItem.qtd), minimo:Number(novoItem.minimo), preco:Number(novoItem.preco)};
-    const novosItens = [...itens, novo];
-    setItens(novosItens);
-    salvarStorage(novosItens);
+    fbSalvarItem(novo);
     setModal(null);
     setNovoItem({nome:'',categoria:'insumos',unidade:'UN',qtd:0,minimo:0,preco:0});
     showToast('Item adicionado ✓');
   }
 
   // ===== RENDER =====
+  if (carregando) {
+    return (
+      <div style={{minHeight:'100vh',background:'#F5F0E8',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center'}}>
+        <div style={{fontSize:40,marginBottom:12}}>🌿</div>
+        <div style={{fontFamily:'DM Sans,sans-serif',fontSize:15,color:'#6B7B6C'}}>Carregando estoque...</div>
+      </div>
+    );
+  }
+
   return (
     <div style={{minHeight:'100vh',background:'#F5F0E8',paddingBottom:80}}>
 
