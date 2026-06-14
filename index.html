@@ -57,10 +57,6 @@ function enviarAlertaEmail(item) {
   }).catch(e => console.warn('EmailJS:', e));
 }
 
-const EMAILJS_SERVICE_ID = "SEU_SERVICE_ID";
-const EMAILJS_TEMPLATE_ID = "SEU_TEMPLATE_ID";
-const EMAILJS_PUBLIC_KEY = "SUA_PUBLIC_KEY";
-
 const CATEGORIAS = {
   insumos:    { label:"Insumos",       emoji:"🌱", cor:"var(--vm)" },
   ferramentas:{ label:"Ferramentas",   emoji:"🔧", cor:"var(--terra)" },
@@ -130,12 +126,22 @@ function App() {
         ESTOQUE_INICIAL.forEach(item => {
           batch.set(db.collection('estoque_itens').doc(String(item.id)), item);
         });
-        batch.commit();
+        batch.commit()
+          .then(() => console.log('Estoque inicial populado'))
+          .catch(e => { console.error('Erro ao popular:', e); alert('Erro ao popular estoque: ' + e.message); });
+        // Mostrar os itens iniciais na tela imediatamente (otimista)
+        const arr = [...ESTOQUE_INICIAL];
+        arr.sort((a,b) => a.nome.localeCompare(b.nome));
+        setItens(arr);
       } else {
         const arr = snap.docs.map(d => d.data());
         arr.sort((a,b) => a.nome.localeCompare(b.nome));
         setItens(arr);
       }
+      setCarregando(false);
+    }, err => {
+      console.error('Erro Firestore:', err);
+      alert('Erro ao conectar no banco: ' + err.message + '\n\nVerifique as regras do Firestore.');
       setCarregando(false);
     });
 
