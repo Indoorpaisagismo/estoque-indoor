@@ -9,6 +9,7 @@
 <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap');
   :root {
@@ -38,6 +39,23 @@ const firebaseConfig = {
 };
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
+
+// ===== EMAILJS =====
+const EMAILJS_SERVICE = 'service_rnrk6d9';
+const EMAILJS_TEMPLATE = 'template_1c6v8jd';
+const EMAILJS_TEMPLATE_LISTA = 'template_g1by1jf';
+const EMAILJS_PUBLIC_KEY = 'nLg7kv7u1nqJ6yaVZ';
+emailjs.init(EMAILJS_PUBLIC_KEY);
+
+function enviarAlertaEmail(item) {
+  const cats = { insumos:'Insumos', ferramentas:'Ferramentas', epis:'EPIs', consumo:'Uso & Consumo' };
+  emailjs.send(EMAILJS_SERVICE, EMAILJS_TEMPLATE, {
+    item_nome: item.nome,
+    categoria: cats[item.categoria] || item.categoria,
+    qtd_atual: item.qtd,
+    qtd_minimo: item.minimo
+  }).catch(e => console.warn('EmailJS:', e));
+}
 
 const EMAILJS_SERVICE_ID = "SEU_SERVICE_ID";
 const EMAILJS_TEMPLATE_ID = "SEU_TEMPLATE_ID";
@@ -222,9 +240,43 @@ function App() {
     const novoMov = { id:Date.now(), itemId:modal.item.id, tipo, qtd:q, responsavel, obs:obs||'', data:new Date().toLocaleDateString('pt-BR') };
     fbSalvarItem(itemAtualizado);
     fbSalvarMovimento(novoMov);
+
+    // Disparar alerta por e-mail se a saída cruzou o mínimo
+    if (tipo==='saida' && modal.item.minimo>0) {
+      const estavaOk = modal.item.qtd > modal.item.minimo;
+      const ficouBaixo = novaQtd <= modal.item.minimo;
+      if (estavaOk && ficouBaixo) {
+        enviarAlertaEmail(itemAtualizado);
+      }
+    }
+
     setModal(null);
     setForm({});
     showToast(tipo==='entrada'?'Entrada registrada ✓':'Saída registrada ✓');
+  }
+
+  function enviarListaReposicao() {
+    if (alertas.length === 0) { showToast('Nenhum item para repor'); return; }
+    const cats = { insumos:'INSUMOS', ferramentas:'FERRAMENTAS', epis:'EPIs', consumo:'USO & CONSUMO' };
+    let texto = '';
+    Object.keys(cats).forEach(catKey => {
+      const itensCat = alertas.filter(i => i.categoria === catKey);
+      if (itensCat.length === 0) return;
+      texto += `\n${cats[catKey]}\n`;
+      itensCat.forEach(i => {
+        const status = i.qtd <= 0 ? 'ZERADO' : 'CRÍTICO';
+        texto += `  • ${i.nome} — atual: ${i.qtd} ${i.unidade} / mín: ${i.minimo} [${status}]\n`;
+      });
+    });
+    emailjs.send(EMAILJS_SERVICE, EMAILJS_TEMPLATE_LISTA, {
+      lista_itens: texto,
+      total_itens: alertas.length
+    }).then(() => {
+      showToast('Lista enviada por e-mail ✓');
+    }).catch(e => {
+      console.warn('EmailJS lista:', e);
+      showToast('Erro ao enviar — verifique o template');
+    });
   }
 
   function adicionarItem() {
@@ -418,6 +470,9 @@ function App() {
                 <div style={{color:'#6B7B6C',marginTop:6,fontSize:13}}>Nenhum item abaixo do mínimo.</div>
               </div>
             : <>
+                <button style={{...S.btnPrim,marginBottom:16,display:'flex',alignItems:'center',justifyContent:'center',gap:8}} onClick={enviarListaReposicao}>
+                  📧 Enviar lista de reposição por e-mail
+                </button>
                 <div style={{display:'flex',gap:6,flexWrap:'wrap',marginBottom:16}}>
                   <button style={S.btnSec(alertaCat==='todas'?'#2C3E2D':undefined)} onClick={()=>setAlertaCat('todas')}
                     {...(alertaCat==='todas'?{style:{...S.btnSec(),...{background:'#2C3E2D',color:'#FDFCF9',border:'none'}}}:{})}>
