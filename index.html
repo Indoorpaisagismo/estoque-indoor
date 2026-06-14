@@ -1,388 +1,648 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Estoque_INDOOR 🌿</title>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;600;700;800&display=swap" rel="stylesheet"/>
-  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-  <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    body { background: #0e1a12; color: #d4e8d0; font-family: 'DM Sans', sans-serif; }
-    input, select, button { font-family: inherit; }
-    ::-webkit-scrollbar { width: 6px; height: 6px; }
-    ::-webkit-scrollbar-track { background: #1e2f22; }
-    ::-webkit-scrollbar-thumb { background: #2a4a33; border-radius: 3px; }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>INDOOR · Estoque</title>
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap');
+  :root {
+    --vd:#2C3E2D;--vm:#4A6741;--vc:#7A9E76;
+    --bg:#F5F0E8;--bge:#E8E0D0;--terra:#A67C52;--terrac:#C49A6C;
+    --branco:#FDFCF9;--txt:#1E2B1F;--txts:#6B7B6C;
+    --erro:#C0392B;--ok:#27AE60;--alerta:#E67E22;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--txt);min-height:100vh;padding-bottom:80px;}
+  input,select,button,textarea{font-family:inherit;}
+</style>
 </head>
 <body>
 <div id="root"></div>
 <script type="text/babel">
-const { useState, useMemo } = React;
+const { useState, useMemo, useEffect } = React;
 
-const EMAILJS_SERVICE_ID = "service_rnrk6d9";
-const EMAILJS_TEMPLATE_ID = "template_1c6v8jd";
-const EMAILJS_PUBLIC_KEY = "nLg7kv7u1nqJ6yaVZ";
+// ===== FIREBASE =====
+const firebaseConfig = {
+  apiKey: "AIzaSyCe5c7z-CBesIw3hR9TOBl8EYUdEtkl0XY",
+  authDomain: "indoor-hub.firebaseapp.com",
+  projectId: "indoor-hub",
+  storageBucket: "indoor-hub.firebasestorage.app",
+  messagingSenderId: "1042863056704",
+  appId: "1:1042863056704:web:58598bf4aea53d2b01fca5"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+
+const EMAILJS_SERVICE_ID = "SEU_SERVICE_ID";
+const EMAILJS_TEMPLATE_ID = "SEU_TEMPLATE_ID";
+const EMAILJS_PUBLIC_KEY = "SUA_PUBLIC_KEY";
 
 const CATEGORIAS = {
-  insumos:    { label: "Insumos",       emoji: "🌱", cor: "#4a7c59" },
-  ferramentas:{ label: "Ferramentas",   emoji: "🔧", cor: "#8b6914" },
-  epis:       { label: "EPIs",          emoji: "🦺", cor: "#b85c2a" },
-  consumo:    { label: "Uso & Consumo", emoji: "⛽", cor: "#2a6b8b" },
+  insumos:    { label:"Insumos",       emoji:"🌱", cor:"var(--vm)" },
+  ferramentas:{ label:"Ferramentas",   emoji:"🔧", cor:"var(--terra)" },
+  epis:       { label:"EPIs",          emoji:"🦺", cor:"#b85c2a" },
+  consumo:    { label:"Uso & Consumo", emoji:"⛽", cor:"#2a6b8b" },
 };
 
-const ESTOQUE_INICIAL = [{"id": 1, "nome": "Areia Branca para Lago (40kg)", "categoria": "insumos", "unidade": "SC", "qtd": 45.0, "minimo": 0, "preco": 0.0}, {"id": 2, "nome": "Areia Grossa", "categoria": "insumos", "unidade": "M³", "qtd": 0.0, "minimo": 0, "preco": 160.0}, {"id": 3, "nome": "Areia Grossa (Saco 20kg)", "categoria": "insumos", "unidade": "SC", "qtd": -77.0, "minimo": 0, "preco": 14.0}, {"id": 4, "nome": "Argila Expandida 50L", "categoria": "insumos", "unidade": "UN", "qtd": 25.0, "minimo": 0, "preco": 68.0}, {"id": 5, "nome": "Basacote 15-09-12 (5 meses)", "categoria": "insumos", "unidade": "KG", "qtd": 0.0, "minimo": 0, "preco": 139.0}, {"id": 6, "nome": "Condicionador de Solo (20 Kg)", "categoria": "insumos", "unidade": "UN", "qtd": 56.0, "minimo": 0, "preco": 35.0}, {"id": 7, "nome": "Cacão de Pedra Goias", "categoria": "insumos", "unidade": "m²", "qtd": 0.0, "minimo": 0, "preco": 240.0}, {"id": 8, "nome": "Cacão de Pedra Miracema", "categoria": "insumos", "unidade": "m²", "qtd": 0.0, "minimo": 0, "preco": 0.0}, {"id": 9, "nome": "Cacão de Pedra São Tomé", "categoria": "insumos", "unidade": "m²", "qtd": 0.0, "minimo": 0, "preco": 38.0}, {"id": 10, "nome": "Calcário Dolomítico (25kg)", "categoria": "insumos", "unidade": "kg", "qtd": 2.0, "minimo": 0, "preco": 3.5}, {"id": 11, "nome": "Casca de Pinus Polida M (14kg)", "categoria": "insumos", "unidade": "UN", "qtd": 110.0, "minimo": 0, "preco": 75.0}, {"id": 12, "nome": "Casca de Pinus Polida P (14kg)", "categoria": "insumos", "unidade": "UN", "qtd": 60.0, "minimo": 0, "preco": 60.0}, {"id": 13, "nome": "Cepilho (bag)", "categoria": "insumos", "unidade": "BAG", "qtd": 0.0, "minimo": 0, "preco": 25.0}, {"id": 14, "nome": "Destinação de Resíduos", "categoria": "insumos", "unidade": "m³", "qtd": 0.0, "minimo": 0, "preco": 110.0}, {"id": 15, "nome": "Farinha de Osso (1Kg)", "categoria": "insumos", "unidade": "UN", "qtd": 4.0, "minimo": 0, "preco": 15.9}, {"id": 16, "nome": "Fert. Forth Jardim (Sacaria de 25kg)", "categoria": "insumos", "unidade": "KG", "qtd": 3.0, "minimo": 0, "preco": 13.0}, {"id": 17, "nome": "Fert. Forth Plantio (Sacaria de 25kg)", "categoria": "insumos", "unidade": "KG", "qtd": 2.0, "minimo": 0, "preco": 8.0}, {"id": 18, "nome": "Fertilizante Jardim Bonito 250ml", "categoria": "insumos", "unidade": "UN", "qtd": 7.0, "minimo": 0, "preco": 34.9}, {"id": 19, "nome": "Fertilizante Mineral Basocote® 16-8-12 (150g)", "categoria": "insumos", "unidade": "UN", "qtd": 0.0, "minimo": 0, "preco": 14.9}, {"id": 20, "nome": "Fertilizante NPK 10-10-10", "categoria": "insumos", "unidade": "KG", "qtd": 0.0, "minimo": 0, "preco": 10.9}, {"id": 21, "nome": "Fertilizante NPK 20-05-20", "categoria": "insumos", "unidade": "KG", "qtd": 20.0, "minimo": 0, "preco": 10.9}, {"id": 22, "nome": "Fertilizante Organomineral Nutree Planta (1L)", "categoria": "insumos", "unidade": "ML", "qtd": 0.0, "minimo": 0, "preco": 0.3}, {"id": 23, "nome": "Fertilizante Organomineral Nutree Raiz (1L)", "categoria": "insumos", "unidade": "ML", "qtd": 0.0, "minimo": 0, "preco": 0.3}, {"id": 24, "nome": "Fertlizante Foliar 100ml", "categoria": "insumos", "unidade": "UN", "qtd": 12.0, "minimo": 0, "preco": 9.0}, {"id": 25, "nome": "Formicida 50g", "categoria": "insumos", "unidade": "Un", "qtd": 20.0, "minimo": 0, "preco": 1.9}, {"id": 26, "nome": "Acaricida (500ml)", "categoria": "insumos", "unidade": "UN", "qtd": 3.0, "minimo": 0, "preco": 36.9}, {"id": 27, "nome": "Forth Coqueiro (10Kg)", "categoria": "insumos", "unidade": "SC", "qtd": 0.0, "minimo": 0, "preco": 118.7}, {"id": 28, "nome": "Gel para Plantio", "categoria": "insumos", "unidade": "KG", "qtd": 12.0, "minimo": 0, "preco": 120.0}, {"id": 29, "nome": "Inseticida (500ml)", "categoria": "insumos", "unidade": "UN", "qtd": 5.0, "minimo": 0, "preco": 31.9}, {"id": 30, "nome": "Fungicida (500mL)", "categoria": "insumos", "unidade": "UN", "qtd": 10.0, "minimo": 0, "preco": 45.9}, {"id": 31, "nome": "Lambda Cialotrina (100 ml)", "categoria": "insumos", "unidade": "UN", "qtd": 0.0, "minimo": 0, "preco": 45.0}, {"id": 32, "nome": "Macdrain J 0,5m x 0,2m", "categoria": "insumos", "unidade": "UN", "qtd": 0.0, "minimo": 0, "preco": 11.9}, {"id": 33, "nome": "Manta Geotextil 130g", "categoria": "insumos", "unidade": "M2", "qtd": 115.0, "minimo": 0, "preco": 10.0}, {"id": 34, "nome": "New Potamag (K2O:14%) c/ 40Kg", "categoria": "insumos", "unidade": "SC", "qtd": 0.0, "minimo": 0, "preco": 485.0}, {"id": 35, "nome": "NPK 10-10-10 Líquido (100mL)", "categoria": "insumos", "unidade": "UN", "qtd": 0.0, "minimo": 0, "preco": 10.9}, {"id": 36, "nome": "Repelente Fumo Líquido (500ml)", "categoria": "insumos", "unidade": "UN", "qtd": 9.0, "minimo": 0, "preco": 19.9}, {"id": 37, "nome": "Repelente Óleo de Neem (500ml)", "categoria": "insumos", "unidade": "UN", "qtd": 9.0, "minimo": 0, "preco": 24.9}, {"id": 38, "nome": "Seixo Branco 40kg", "categoria": "insumos", "unidade": "UN", "qtd": 0.0, "minimo": 0, "preco": 83.0}, {"id": 39, "nome": "Seixo Cinza 40kg", "categoria": "insumos", "unidade": "UN", "qtd": 0.0, "minimo": 0, "preco": 89.0}, {"id": 40, "nome": "Seixo Natural 40kg", "categoria": "insumos", "unidade": "KG", "qtd": 0.0, "minimo": 0, "preco": 38.0}, {"id": 41, "nome": "Separador de Grama", "categoria": "insumos", "unidade": "M", "qtd": 7.0, "minimo": 0, "preco": 4.0}, {"id": 42, "nome": "Superfosfato Simples (50kg)", "categoria": "insumos", "unidade": "KG", "qtd": 0.0, "minimo": 0, "preco": 145.0}, {"id": 43, "nome": "Terra para vasos e floreiras (20kg)", "categoria": "insumos", "unidade": "UN", "qtd": 50.0, "minimo": 0, "preco": 25.9}, {"id": 44, "nome": "Terra Vegetal (20kg)", "categoria": "insumos", "unidade": "UN", "qtd": 70.0, "minimo": 0, "preco": 30.0}, {"id": 45, "nome": "Terra Vermelha (Argila)", "categoria": "insumos", "unidade": "M3", "qtd": 0.0, "minimo": 0, "preco": 180.0}, {"id": 46, "nome": "Tiamex 750 WG 20GR", "categoria": "insumos", "unidade": "UN", "qtd": 0.0, "minimo": 0, "preco": 28.0}, {"id": 47, "nome": "Turfa Liquida (5L)", "categoria": "insumos", "unidade": "L", "qtd": 24.0, "minimo": 0, "preco": 47.0}, {"id": 48, "nome": "Abraçadeira Nylon - Enforca Gato", "categoria": "consumo", "unidade": "PC", "qtd": 2.0, "minimo": 2, "preco": 6.5}, {"id": 49, "nome": "Adesivo de Poliuretano PU40 (440g)", "categoria": "consumo", "unidade": "UN", "qtd": 2.0, "minimo": 2, "preco": 11.34}, {"id": 50, "nome": "Arame recozido 12 / 14", "categoria": "consumo", "unidade": "KG", "qtd": 1.0, "minimo": 3, "preco": 7.0}, {"id": 51, "nome": "Cabo Cavadeira Articulada 1,40m", "categoria": "consumo", "unidade": "UN", "qtd": 0.0, "minimo": 1, "preco": 5.0}, {"id": 52, "nome": "Cabo Enxada", "categoria": "consumo", "unidade": "UN", "qtd": 4.0, "minimo": 2, "preco": 382.87}, {"id": 53, "nome": "Cabo PP (2X2,5mm)", "categoria": "consumo", "unidade": "M", "qtd": 0.0, "minimo": 30, "preco": 239.9}, {"id": 54, "nome": "Capa de Chuva Descartavel c/ capuz", "categoria": "consumo", "unidade": "UN", "qtd": 0.0, "minimo": 0, "preco": 38.72}, {"id": 55, "nome": "Capa de Chuva Forrada c/ capuz", "categoria": "consumo", "unidade": "UN", "qtd": 4.0, "minimo": 0, "preco": 31.82}, {"id": 56, "nome": "Capa para Carretinha", "categoria": "consumo", "unidade": "PC", "qtd": 0.0, "minimo": 0, "preco": 2.35}, {"id": 57, "nome": "Carretel Roçadeira", "categoria": "consumo", "unidade": "UN", "qtd": 0.0, "minimo": 0, "preco": 35.0}, {"id": 58, "nome": "Conector Fêmea Engate Rápido", "categoria": "consumo", "unidade": "UN", "qtd": 10.0, "minimo": 3, "preco": 57.0}, {"id": 59, "nome": "Corda Trançada Poliester 10mm", "categoria": "consumo", "unidade": "M", "qtd": 200.0, "minimo": 60, "preco": 24.0}, {"id": 60, "nome": "Cunha madeira p/ cabo enxada", "categoria": "consumo", "unidade": "UN", "qtd": 10.0, "minimo": 0, "preco": 26.0}, {"id": 61, "nome": "Desengripante", "categoria": "consumo", "unidade": "PC", "qtd": 0.0, "minimo": 1, "preco": 164.53}, {"id": 62, "nome": "Disco de Corte (4.1/2 X 1,0)", "categoria": "consumo", "unidade": "PC", "qtd": 12.0, "minimo": 6, "preco": 7.5}, {"id": 63, "nome": "Disco Flap (4.1/2 X 1,0) - G-80", "categoria": "consumo", "unidade": "PC", "qtd": 4.0, "minimo": 2, "preco": 16.0}, {"id": 64, "nome": "Engate Rápido", "categoria": "consumo", "unidade": "UN", "qtd": 13.0, "minimo": 2, "preco": 42.0}, {"id": 65, "nome": "Fio de Nylon (Cortador de Grama)", "categoria": "consumo", "unidade": "M", "qtd": 10.0, "minimo": 6, "preco": 3999.0}, {"id": 66, "nome": "Fita Crepe Larga", "categoria": "consumo", "unidade": "UN", "qtd": 9.0, "minimo": 3, "preco": 50.0}, {"id": 67, "nome": "Fita Dupla Face", "categoria": "consumo", "unidade": "UN", "qtd": 0.0, "minimo": 0, "preco": 8.6}, {"id": 68, "nome": "Fita Isolante G", "categoria": "consumo", "unidade": "UN", "qtd": 7.0, "minimo": 3, "preco": 12.32}, {"id": 69, "nome": "Fita Isolante Auto Fusão", "categoria": "consumo", "unidade": "PC", "qtd": 6.0, "minimo": 1, "preco": 48.0}, {"id": 70, "nome": "Fita Veda Rosca", "categoria": "consumo", "unidade": "UN", "qtd": 62.0, "minimo": 9, "preco": 0.1}, {"id": 71, "nome": "Fluido para Radiador", "categoria": "consumo", "unidade": "L", "qtd": 0.0, "minimo": 0, "preco": 68.0}, {"id": 72, "nome": "Gas Butano 227G", "categoria": "consumo", "unidade": "PC", "qtd": 0.0, "minimo": 0, "preco": 13.0}, {"id": 73, "nome": "Lona Preta (4x110)", "categoria": "consumo", "unidade": "m", "qtd": 110.0, "minimo": 99, "preco": 12.6}, {"id": 74, "nome": "Óleo para corrente - Motosserra", "categoria": "consumo", "unidade": "FR", "qtd": 1.0, "minimo": 0, "preco": 44.9}, {"id": 75, "nome": "Óleo Stihl 2T (Roçadeira/Motosserra)", "categoria": "consumo", "unidade": "UN", "qtd": 5.0, "minimo": 1, "preco": 22.0}, {"id": 76, "nome": "Óleo Stihl 4T (10W30) - Motocultivador", "categoria": "consumo", "unidade": "UN", "qtd": 1.0, "minimo": 0, "preco": 50.0}, {"id": 77, "nome": "Serra Manual Starrett", "categoria": "consumo", "unidade": "UN", "qtd": 4.0, "minimo": 3, "preco": 0.0}, {"id": 78, "nome": "Torneira Plástica Jardim 1/2\" e 3/4\"", "categoria": "consumo", "unidade": "UN", "qtd": 10.0, "minimo": 3, "preco": 2.25}, {"id": 79, "nome": "Tinta Spray Preto Fosco", "categoria": "consumo", "unidade": "UN", "qtd": 6.0, "minimo": 2, "preco": 0.0}, {"id": 80, "nome": "Alicate de Corte", "categoria": "ferramentas", "unidade": "UN", "qtd": 1.0, "minimo": 2, "preco": 25.5}, {"id": 81, "nome": "Alicate para prensar acropress", "categoria": "ferramentas", "unidade": "UN", "qtd": 1.0, "minimo": 2, "preco": 309.8}, {"id": 82, "nome": "Alicate Universal 8'", "categoria": "ferramentas", "unidade": "UN", "qtd": 1.0, "minimo": 2, "preco": 29.27}, {"id": 83, "nome": "Arco de Serra", "categoria": "ferramentas", "unidade": "UN", "qtd": 1.0, "minimo": 2, "preco": 32.0}, {"id": 84, "nome": "Bag 1000L", "categoria": "ferramentas", "unidade": "UN", "qtd": 5.0, "minimo": 2, "preco": 56.36}, {"id": 85, "nome": "Balde com tampa", "categoria": "ferramentas", "unidade": "UN", "qtd": 2.0, "minimo": 2, "preco": 13.79}, {"id": 86, "nome": "Carrinho de carga dobrável", "categoria": "ferramentas", "unidade": "UN", "qtd": 1.0, "minimo": 2, "preco": 13.0}, {"id": 87, "nome": "Carrinho para Enrolar Mangueira (50m)", "categoria": "ferramentas", "unidade": "UN", "qtd": 0.0, "minimo": 2, "preco": 21.0}, {"id": 88, "nome": "Carrinho de carga", "categoria": "ferramentas", "unidade": "UN", "qtd": 1.0, "minimo": 2, "preco": 21.0}, {"id": 89, "nome": "Carriola", "categoria": "ferramentas", "unidade": "UN", "qtd": 2.0, "minimo": 2, "preco": 1.82}, {"id": 90, "nome": "Cavadeira Articulada (1,80m)", "categoria": "ferramentas", "unidade": "UN", "qtd": 2.0, "minimo": 2, "preco": 1.5}, {"id": 91, "nome": "Cavadeira Articulada Pequena (1,20m)", "categoria": "ferramentas", "unidade": "UN", "qtd": 3.0, "minimo": 2, "preco": 613.11}, {"id": 92, "nome": "Chave de Corrente", "categoria": "ferramentas", "unidade": "UN", "qtd": 1.0, "minimo": 2, "preco": 9.85}, {"id": 93, "nome": "Chave Grifo 14", "categoria": "ferramentas", "unidade": "UN", "qtd": 1.0, "minimo": 2, "preco": 1.5}, {"id": 94, "nome": "Chave Inglesa 08'", "categoria": "ferramentas", "unidade": "UN", "qtd": 1.0, "minimo": 2, "preco": 3.0}, {"id": 95, "nome": "Chave Universal p/ aspersor rotor", "categoria": "ferramentas", "unidade": "UN", "qtd": 2.0, "minimo": 2, "preco": 7.5}, {"id": 96, "nome": "Colher de Pedreiro", "categoria": "ferramentas", "unidade": "UN", "qtd": 0.0, "minimo": 2, "preco": 69.25}, {"id": 97, "nome": "Enxada Larga c/ cabo", "categoria": "ferramentas", "unidade": "UN", "qtd": 5.0, "minimo": 2, "preco": 21.9}, {"id": 98, "nome": "Enxadão Larga c/ cabo", "categoria": "ferramentas", "unidade": "UN", "qtd": 1.0, "minimo": 2, "preco": 184.25}, {"id": 99, "nome": "Escada Articulada 12 degraus", "categoria": "ferramentas", "unidade": "UN", "qtd": 1.0, "minimo": 2, "preco": 19.48}, {"id": 100, "nome": "Estilete Simples 18mm", "categoria": "ferramentas", "unidade": "UN", "qtd": 2.0, "minimo": 2, "preco": 21.9}, {"id": 101, "nome": "Facão para mato c/ cabo", "categoria": "ferramentas", "unidade": "UN", "qtd": 1.0, "minimo": 2, "preco": 18.5}, {"id": 102, "nome": "Garrafa Térmica 5L", "categoria": "ferramentas", "unidade": "UN", "qtd": 1.0, "minimo": 2, "preco": 3.8}, {"id": 103, "nome": "Jogo de Serra Copo", "categoria": "ferramentas", "unidade": "UN", "qtd": 1.0, "minimo": 2, "preco": 14.6}, {"id": 104, "nome": "Kit Cinta Catraca (9m)", "categoria": "ferramentas", "unidade": "UN", "qtd": 1.0, "minimo": 2, "preco": 0.38}, {"id": 105, "nome": "Lima c/ cabo", "categoria": "ferramentas", "unidade": "UN", "qtd": 2.0, "minimo": 2, "preco": 29.71}, {"id": 106, "nome": "Machado c/ Cabo", "categoria": "ferramentas", "unidade": "UN", "qtd": 1.0, "minimo": 2, "preco": 0.3}, {"id": 107, "nome": "Mangueira de Jardim Reforçada", "categoria": "ferramentas", "unidade": "M", "qtd": 0.0, "minimo": 9, "preco": 96.14}, {"id": 108, "nome": "Martelo Carpinteiro", "categoria": "ferramentas", "unidade": "UN", "qtd": 1.0, "minimo": 2, "preco": 27.0}, {"id": 109, "nome": "Martelo de Borracha", "categoria": "ferramentas", "unidade": "UN", "qtd": 1.0, "minimo": 2, "preco": 18.0}, {"id": 110, "nome": "Misturador de Combustível (1L)", "categoria": "ferramentas", "unidade": "UN", "qtd": 1.0, "minimo": 2, "preco": 2.25}, {"id": 111, "nome": "Motocultivador Stihl MH610.0", "categoria": "ferramentas", "unidade": "UN", "qtd": 1.0, "minimo": 2, "preco": 3999.0}, {"id": 112, "nome": "Motosserra Stihl MS 162", "categoria": "ferramentas", "unidade": "UN", "qtd": 1.0, "minimo": 2, "preco": 1170.0}, {"id": 113, "nome": "Multimetro Digital", "categoria": "ferramentas", "unidade": "UN", "qtd": 2.0, "minimo": 2, "preco": 25.0}, {"id": 114, "nome": "Pá com Cabo", "categoria": "ferramentas", "unidade": "UN", "qtd": 2.0, "minimo": 2, "preco": 75.0}, {"id": 115, "nome": "Pá Vanga de Bico com cabo", "categoria": "ferramentas", "unidade": "UN", "qtd": 1.0, "minimo": 2, "preco": 48.0}, {"id": 116, "nome": "Pá para Jardinagem", "categoria": "ferramentas", "unidade": "UN", "qtd": 0.0, "minimo": 2, "preco": 24.9}, {"id": 117, "nome": "Pistola Aplicador de Silicone", "categoria": "ferramentas", "unidade": "UN", "qtd": 1.0, "minimo": 2, "preco": 68.0}, {"id": 118, "nome": "Polvilhadeira 1kg", "categoria": "ferramentas", "unidade": "UN", "qtd": 0.0, "minimo": 2, "preco": 46.7}, {"id": 119, "nome": "Pulverizador compressão prévia 2L", "categoria": "ferramentas", "unidade": "UN", "qtd": 1.0, "minimo": 2, "preco": 59.9}, {"id": 120, "nome": "Pulverizador compressão prévia 20L", "categoria": "ferramentas", "unidade": "UN", "qtd": 2.0, "minimo": 2, "preco": 139.0}, {"id": 121, "nome": "Pulverizador manual 500mL", "categoria": "ferramentas", "unidade": "UN", "qtd": 4.0, "minimo": 2, "preco": 12.9}, {"id": 122, "nome": "Rastelo Ferro", "categoria": "ferramentas", "unidade": "UN", "qtd": 3.0, "minimo": 2, "preco": 26.0}, {"id": 123, "nome": "Regador 1,5 L", "categoria": "ferramentas", "unidade": "UN", "qtd": 16.0, "minimo": 2, "preco": 12.9}, {"id": 124, "nome": "Regador 3,0 L", "categoria": "ferramentas", "unidade": "UN", "qtd": 0.0, "minimo": 2, "preco": 19.9}, {"id": 125, "nome": "Roçadeira Stihl FS120", "categoria": "ferramentas", "unidade": "UN", "qtd": 0.0, "minimo": 2, "preco": 1929.0}, {"id": 126, "nome": "Tesoura de Poda", "categoria": "ferramentas", "unidade": "UN", "qtd": 1.0, "minimo": 2, "preco": 27.0}, {"id": 127, "nome": "Torqueza 12\"", "categoria": "ferramentas", "unidade": "UN", "qtd": 1.0, "minimo": 2, "preco": 75.0}, {"id": 128, "nome": "Trena de Aço", "categoria": "ferramentas", "unidade": "UN", "qtd": 0.0, "minimo": 2, "preco": 25.8}, {"id": 129, "nome": "Trena Fita", "categoria": "ferramentas", "unidade": "UN", "qtd": 1.0, "minimo": 2, "preco": 23.9}, {"id": 130, "nome": "Tubo Engraxante (80g)", "categoria": "ferramentas", "unidade": "UN", "qtd": 1.0, "minimo": 2, "preco": 30.0}, {"id": 131, "nome": "Vanga Reta", "categoria": "ferramentas", "unidade": "UN", "qtd": 4.0, "minimo": 2, "preco": 44.9}, {"id": 132, "nome": "EPI - Boné com aba", "categoria": "epis", "unidade": "UN", "qtd": 0.0, "minimo": 2, "preco": 499.9}, {"id": 133, "nome": "EPI - Botina", "categoria": "epis", "unidade": "UN", "qtd": 5.0, "minimo": 2, "preco": 3.0}, {"id": 134, "nome": "EPI - Botina de Amarrar", "categoria": "epis", "unidade": "UN", "qtd": 0.0, "minimo": 2, "preco": 2.6}, {"id": 135, "nome": "EPI - Calça Sarja", "categoria": "epis", "unidade": "UN", "qtd": 11.0, "minimo": 2, "preco": 37.0}, {"id": 136, "nome": "EPI - Camiseta UV", "categoria": "epis", "unidade": "UN", "qtd": 12.0, "minimo": 2, "preco": 15.9}, {"id": 137, "nome": "EPI - Capacete", "categoria": "epis", "unidade": "UN", "qtd": 0.0, "minimo": 2, "preco": 0.9}, {"id": 138, "nome": "EPI - Chapéu de Brim", "categoria": "epis", "unidade": "UN", "qtd": 0.0, "minimo": 2, "preco": 3.18}, {"id": 139, "nome": "EPI - Chapéu de Palha", "categoria": "epis", "unidade": "UN", "qtd": 0.0, "minimo": 2, "preco": 13.0}, {"id": 140, "nome": "EPI - Chapéu de Tecido com Aba", "categoria": "epis", "unidade": "UN", "qtd": 0.0, "minimo": 2, "preco": 4.9}, {"id": 141, "nome": "EPI - Cinta Ergonomica", "categoria": "epis", "unidade": "UN", "qtd": 0.0, "minimo": 1, "preco": 6.77}, {"id": 142, "nome": "EPI - Cinto Paraquedista", "categoria": "epis", "unidade": "UN", "qtd": 3.0, "minimo": 1, "preco": 24.0}, {"id": 143, "nome": "EPI - Jugular Capacete", "categoria": "epis", "unidade": "UN", "qtd": 10.0, "minimo": 2, "preco": 6.5}, {"id": 144, "nome": "EPI - Luva Nylon Wave PU", "categoria": "epis", "unidade": "UN", "qtd": 10.0, "minimo": 3, "preco": 15.0}, {"id": 145, "nome": "EPI - Luva Vaqueta", "categoria": "epis", "unidade": "UN", "qtd": 6.0, "minimo": 1, "preco": 6.5}, {"id": 146, "nome": "EPI - Máscara Descartável (PFF2)", "categoria": "epis", "unidade": "UN", "qtd": 3.0, "minimo": 3, "preco": 75.0}, {"id": 147, "nome": "EPI - Oculos de Proteção", "categoria": "epis", "unidade": "UN", "qtd": 2.0, "minimo": 1, "preco": 42.0}, {"id": 148, "nome": "EPI - Protetor Auricular Tipo Concha", "categoria": "epis", "unidade": "UN", "qtd": 1.0, "minimo": 2, "preco": 29.2}, {"id": 149, "nome": "EPI - Protetor solar", "categoria": "epis", "unidade": "UN", "qtd": 0.0, "minimo": 1, "preco": 9.96}, {"id": 150, "nome": "EPI - Repelente", "categoria": "epis", "unidade": "UN", "qtd": 6.0, "minimo": 2, "preco": 3.25}, {"id": 151, "nome": "EPI - Talabarte em Fita", "categoria": "epis", "unidade": "UN", "qtd": 3.0, "minimo": 1, "preco": 0.52}];
+const ESTOQUE_INICIAL = [{"id": 1, "nome": "Areia Grossa", "categoria": "insumos", "unidade": "M³", "qtd": 0.0, "minimo": 0.0, "preco": 160.0}, {"id": 2, "nome": "Areia Grossa (Saco 20kg)", "categoria": "insumos", "unidade": "SC", "qtd": 0.0, "minimo": 0.0, "preco": 160.0}, {"id": 3, "nome": "Argila Expandida 50L", "categoria": "insumos", "unidade": "UN", "qtd": 50.0, "minimo": 25.0, "preco": 34.0}, {"id": 4, "nome": "Basacote 15-09-12 (5 meses)", "categoria": "insumos", "unidade": "KG", "qtd": 0.0, "minimo": 1.0, "preco": 60.59}, {"id": 5, "nome": "Condicionador de Solo (20 Kg)", "categoria": "insumos", "unidade": "UN", "qtd": 0.0, "minimo": 25.0, "preco": 12.9}, {"id": 6, "nome": "Cacão de Pedra Goias", "categoria": "insumos", "unidade": "m²", "qtd": 0.0, "minimo": 0.0, "preco": 0.0}, {"id": 7, "nome": "Cacão de Pedra Miracema", "categoria": "insumos", "unidade": "m²", "qtd": 0.0, "minimo": 0.0, "preco": 0.0}, {"id": 8, "nome": "Cacão de Pedra São Tomé", "categoria": "insumos", "unidade": "m²", "qtd": 0.0, "minimo": 0.0, "preco": 1.5}, {"id": 9, "nome": "Calcário Dolomítico (25kg)", "categoria": "insumos", "unidade": "kg", "qtd": 2.0, "minimo": 2.0, "preco": 1.5}, {"id": 10, "nome": "Calha para Painel Vertical 5x15x7cm", "categoria": "insumos", "unidade": "M", "qtd": 0.0, "minimo": 0.0, "preco": 89.2}, {"id": 11, "nome": "Casca de Pinus Polida M (14kg)", "categoria": "insumos", "unidade": "UN", "qtd": 88.0, "minimo": 20.0, "preco": 28.4}, {"id": 12, "nome": "Casca de Pinus Polida P (14kg)", "categoria": "insumos", "unidade": "UN", "qtd": 58.0, "minimo": 20.0, "preco": 28.4}, {"id": 13, "nome": "Cepilho (bag)", "categoria": "insumos", "unidade": "BAG", "qtd": 0.0, "minimo": 0.0, "preco": 25.0}, {"id": 14, "nome": "Destinação de Resíduos", "categoria": "insumos", "unidade": "m³", "qtd": 0.0, "minimo": 0.0, "preco": 76.0}, {"id": 15, "nome": "Farinha de Osso (1Kg)", "categoria": "insumos", "unidade": "UN", "qtd": 4.0, "minimo": 0.0, "preco": 8.75}, {"id": 16, "nome": "Fert. Forth Jardim (Sacaria de 25kg)", "categoria": "insumos", "unidade": "KG", "qtd": 100.0, "minimo": 50.0, "preco": 8.68}, {"id": 17, "nome": "Fert. Forth Plantio (Sacaria de 25kg)", "categoria": "insumos", "unidade": "KG", "qtd": 150.0, "minimo": 75.0, "preco": 5.7}, {"id": 18, "nome": "Fertilizante Jardim Bonito 250ml", "categoria": "insumos", "unidade": "UN", "qtd": 7.0, "minimo": 0.0, "preco": 16.2}, {"id": 19, "nome": "Fertilizante NPK 10-10-10 ", "categoria": "insumos", "unidade": "KG", "qtd": 0.0, "minimo": 0.0, "preco": 4.28}, {"id": 20, "nome": "Fertilizante NPK 20-05-20", "categoria": "insumos", "unidade": "KG", "qtd": 0.0, "minimo": 40.0, "preco": 4.28}, {"id": 21, "nome": "Fertilizante Organomineral Nutree Planta (1L)", "categoria": "insumos", "unidade": "ML", "qtd": 0.0, "minimo": 1.0, "preco": 0.11}, {"id": 22, "nome": "Fertilizante Organomineral Nutree Raiz (1L)", "categoria": "insumos", "unidade": "ML", "qtd": 0.0, "minimo": 1.0, "preco": 0.11}, {"id": 23, "nome": "Fertlizante Foliar 100ml", "categoria": "insumos", "unidade": "UN", "qtd": 12.0, "minimo": 0.0, "preco": 45.48}, {"id": 24, "nome": "Formicida 50g", "categoria": "insumos", "unidade": "Un", "qtd": 20.0, "minimo": 10.0, "preco": 0.99}, {"id": 25, "nome": "Acaricida (500ml)", "categoria": "insumos", "unidade": "UN", "qtd": 3.0, "minimo": 0.0, "preco": 18.04}, {"id": 26, "nome": "Forth Coqueiro (10Kg)", "categoria": "insumos", "unidade": "SC", "qtd": 0.0, "minimo": 0.0, "preco": 134.3}, {"id": 27, "nome": "Inseticida (500ml)", "categoria": "insumos", "unidade": "UN", "qtd": 5.0, "minimo": 0.0, "preco": 15.92}, {"id": 28, "nome": "Fungicida (500mL)", "categoria": "insumos", "unidade": "UN", "qtd": 10.0, "minimo": 0.0, "preco": 22.09}, {"id": 29, "nome": "Gel para Plantio", "categoria": "insumos", "unidade": "KG", "qtd": 12.0, "minimo": 6.0, "preco": 52.03}, {"id": 30, "nome": "Granilha Bege A2 - 40kg (60kg/m²)", "categoria": "insumos", "unidade": "UN", "qtd": 0.0, "minimo": 0.0, "preco": 0.0}, {"id": 31, "nome": "Lambda Cialotrina (100 ml)", "categoria": "insumos", "unidade": "UN", "qtd": 0.0, "minimo": 2.0, "preco": 0.0}, {"id": 32, "nome": "Macdrain J 0,5m x 0,2m - un 3277", "categoria": "insumos", "unidade": "UN", "qtd": 0.0, "minimo": 0.0, "preco": 5.44}, {"id": 33, "nome": "Manta Geotextil 130g ", "categoria": "insumos", "unidade": "M2", "qtd": 230.0, "minimo": 0.0, "preco": 1.83}, {"id": 34, "nome": "New Potamag (K2O:14% CA:12% MG:3% S:19%) c/ 40Kg", "categoria": "insumos", "unidade": "SC", "qtd": 0.0, "minimo": 1.0, "preco": 210.0}, {"id": 35, "nome": "NPK 10-10-10 Líquido (100mL)", "categoria": "insumos", "unidade": "UN", "qtd": 6.0, "minimo": 0.0, "preco": 3.82}, {"id": 36, "nome": "Plastwall 12L PP Preto CB: 7899745701197", "categoria": "insumos", "unidade": "UN", "qtd": 0.0, "minimo": 0.0, "preco": 42.01}, {"id": 37, "nome": "Potamag Plus (K2O:30% MG:6% S:17%)", "categoria": "insumos", "unidade": "KG", "qtd": 2.0, "minimo": 0.0, "preco": 9.52}, {"id": 38, "nome": "Rachão 3 a 4", "categoria": "insumos", "unidade": "TN", "qtd": 0.0, "minimo": 0.0, "preco": 76.5}, {"id": 39, "nome": "Repelente Fumo Líquido (500ml)", "categoria": "insumos", "unidade": "UN", "qtd": 9.0, "minimo": 0.0, "preco": 10.87}, {"id": 40, "nome": "Repelente Óleo de Neem (500ml) ", "categoria": "insumos", "unidade": "UN", "qtd": 9.0, "minimo": 0.0, "preco": 11.57}, {"id": 41, "nome": "Rochas Naturais", "categoria": "insumos", "unidade": "TN", "qtd": 0.0, "minimo": 0.0, "preco": 0.0}, {"id": 42, "nome": "Rochas Naturais Basalticas (granulometria variada) 400kg/um", "categoria": "insumos", "unidade": "TN", "qtd": 0.0, "minimo": 0.0, "preco": 0.0}, {"id": 43, "nome": "Seixo | Cor: Branco 40kg (80kg/m²)", "categoria": "insumos", "unidade": "UN", "qtd": 0.0, "minimo": 0.0, "preco": 0.0}, {"id": 44, "nome": "Seixo | Cor: Cinza 40kg (80kg/m²)", "categoria": "insumos", "unidade": "UN", "qtd": 0.0, "minimo": 0.0, "preco": 49.0}, {"id": 45, "nome": "Seixo | Cor: Natural 40kg (80kg/m²)", "categoria": "insumos", "unidade": "KG", "qtd": 0.0, "minimo": 0.0, "preco": 22.0}, {"id": 46, "nome": "Separador de Grama", "categoria": "insumos", "unidade": "M", "qtd": 4.0, "minimo": 3.0, "preco": 1.7}, {"id": 47, "nome": "Sulfato de Cobre 150g", "categoria": "insumos", "unidade": "UN", "qtd": 0.0, "minimo": 0.0, "preco": 7.59}, {"id": 48, "nome": "Superfosfato Simples (50kg)", "categoria": "insumos", "unidade": "KG", "qtd": 0.0, "minimo": 1.0, "preco": 0.0}, {"id": 49, "nome": "Terra para vasos e floreiras (20kg)", "categoria": "insumos", "unidade": "UN", "qtd": 58.0, "minimo": 25.0, "preco": 14.29}, {"id": 50, "nome": "Terra Vegetal (20kg)", "categoria": "insumos", "unidade": "UN", "qtd": 40.0, "minimo": 25.0, "preco": 11.88}, {"id": 51, "nome": "Terra Vermelha (Argila)", "categoria": "insumos", "unidade": "M3", "qtd": 0.0, "minimo": 0.0, "preco": 20.0}, {"id": 52, "nome": "Tiamex 750 WG 20GR (Mata Lagarta Coqueiro)", "categoria": "insumos", "unidade": "UN", "qtd": 0.0, "minimo": 0.0, "preco": 28.0}, {"id": 53, "nome": "Turfa Liquida (K O 4,0% + B 0,5%)", "categoria": "insumos", "unidade": "L ", "qtd": 20.0, "minimo": 1.0, "preco": 23.9}, {"id": 54, "nome": "EPI - Boné com aba", "categoria": "epis", "unidade": "UN", "qtd": 0.0, "minimo": 0.0, "preco": 22.0}, {"id": 55, "nome": "EPI - Botina", "categoria": "epis", "unidade": "UN", "qtd": 5.0, "minimo": 4.0, "preco": 79.9}, {"id": 56, "nome": "EPI - Botina de Amarrar", "categoria": "epis", "unidade": "UN", "qtd": 0.0, "minimo": 0.0, "preco": 102.5}, {"id": 57, "nome": "EPI - Calça Sarja", "categoria": "epis", "unidade": "UN", "qtd": 11.0, "minimo": 4.0, "preco": 69.25}, {"id": 58, "nome": "EPI - Camiseta UV", "categoria": "epis", "unidade": "UN", "qtd": 12.0, "minimo": 4.0, "preco": 57.0}, {"id": 59, "nome": "EPI - Capacete", "categoria": "epis", "unidade": "UN", "qtd": 0.0, "minimo": 6.0, "preco": 14.05}, {"id": 60, "nome": "EPI - Chapéu de Brim", "categoria": "epis", "unidade": "UN", "qtd": 0.0, "minimo": 0.0, "preco": 24.0}, {"id": 61, "nome": "EPI - Chapéu de Palha", "categoria": "epis", "unidade": "UN", "qtd": 0.0, "minimo": 0.0, "preco": 29.9}, {"id": 62, "nome": "EPI - Chapéu de Tecido com Aba", "categoria": "epis", "unidade": "UN", "qtd": 0.0, "minimo": 0.0, "preco": 26.0}, {"id": 63, "nome": "EPI - Cinta Ergonomica", "categoria": "epis", "unidade": "UN", "qtd": 0.0, "minimo": 2.0, "preco": 59.9}, {"id": 64, "nome": "EPI - Cinto Paraquedista", "categoria": "epis", "unidade": "UN", "qtd": 3.0, "minimo": 2.0, "preco": 164.53}, {"id": 65, "nome": "EPI - Jugular Capacete", "categoria": "epis", "unidade": "UN", "qtd": 10.0, "minimo": 0.0, "preco": 3.95}, {"id": 66, "nome": "EPI - Luva Nylon Wave PU", "categoria": "epis", "unidade": "UN", "qtd": 10.0, "minimo": 10.0, "preco": 7.5}, {"id": 67, "nome": "EPI - Luva Vaqueta", "categoria": "epis", "unidade": "UN", "qtd": 6.0, "minimo": 2.0, "preco": 16.0}, {"id": 68, "nome": "EPI - Máscara Descartável (PFF2)", "categoria": "epis", "unidade": "UN", "qtd": 3.0, "minimo": 10.0, "preco": 5.82}, {"id": 69, "nome": "EPI - Oculos de Proteção", "categoria": "epis", "unidade": "UN", "qtd": 2.0, "minimo": 4.0, "preco": 4.0}, {"id": 70, "nome": "EPI - Protetor Auricular Tipo Concha 22DB", "categoria": "epis", "unidade": "UN", "qtd": 1.0, "minimo": 1.0, "preco": 46.15}, {"id": 71, "nome": "EPI - Protetor solar", "categoria": "epis", "unidade": "UN", "qtd": 0.0, "minimo": 2.0, "preco": 42.0}, {"id": 72, "nome": "Capa para Carretinha", "categoria": "consumo", "unidade": "PC", "qtd": 1.0, "minimo": 0.0, "preco": 300.0}, {"id": 73, "nome": "EPI - Repelente", "categoria": "epis", "unidade": "UN", "qtd": 6.0, "minimo": 6.0, "preco": 21.9}, {"id": 74, "nome": "EPI - Talabarte em Fita", "categoria": "epis", "unidade": "UN", "qtd": 3.0, "minimo": 2.0, "preco": 184.25}, {"id": 75, "nome": "Alicate de Corte", "categoria": "ferramentas", "unidade": "UN", "qtd": 1.0, "minimo": 0, "preco": 25.5}, {"id": 76, "nome": "Alicate para prensar acropress", "categoria": "ferramentas", "unidade": "UN", "qtd": 1.0, "minimo": 0, "preco": 309.8}, {"id": 77, "nome": "Alicate Universal 8'", "categoria": "ferramentas", "unidade": "UN", "qtd": 1.0, "minimo": 0, "preco": 52.54}, {"id": 78, "nome": "Arco de Serra", "categoria": "ferramentas", "unidade": "UN", "qtd": 1.0, "minimo": 0, "preco": 7.0}, {"id": 79, "nome": "Bag 1000L", "categoria": "ferramentas", "unidade": "UN", "qtd": 5.0, "minimo": 2, "preco": 32.0}, {"id": 80, "nome": "Balde com tampa", "categoria": "ferramentas", "unidade": "UN", "qtd": 2.0, "minimo": 0, "preco": 12.6}, {"id": 81, "nome": "Carrinho de carga", "categoria": "ferramentas", "unidade": "UN", "qtd": 1.0, "minimo": 0, "preco": 1000.0}, {"id": 82, "nome": "Carrinho de carga dobrável", "categoria": "ferramentas", "unidade": "UN", "qtd": 1.0, "minimo": 0, "preco": 382.87}, {"id": 83, "nome": "Carrinho para Enrolar Mangueira (50m)", "categoria": "ferramentas", "unidade": "UN", "qtd": 0.0, "minimo": 0, "preco": 21.0}, {"id": 84, "nome": "Carriola", "categoria": "ferramentas", "unidade": "UN", "qtd": 2.0, "minimo": 1, "preco": 239.9}, {"id": 85, "nome": "Cavadeira Articulada (1,80m)", "categoria": "ferramentas", "unidade": "UN", "qtd": 2.0, "minimo": 0, "preco": 158.0}, {"id": 86, "nome": "Cavadeira Articulada Pequena (1,20m)", "categoria": "ferramentas", "unidade": "UN", "qtd": 3.0, "minimo": 0, "preco": 34.5}, {"id": 87, "nome": "Chave de Corrente", "categoria": "ferramentas", "unidade": "UN", "qtd": 1.0, "minimo": 0, "preco": 37.0}, {"id": 88, "nome": "Chave Grifo 14", "categoria": "ferramentas", "unidade": "UN", "qtd": 1.0, "minimo": 0, "preco": 66.0}, {"id": 89, "nome": "Chave Inglesa 08'", "categoria": "ferramentas", "unidade": "UN", "qtd": 1.0, "minimo": 0, "preco": 38.72}, {"id": 90, "nome": "Chave Universal p/ aspersor rotor - Rain Bird", "categoria": "ferramentas", "unidade": "UN", "qtd": 2.0, "minimo": 0, "preco": 31.82}, {"id": 91, "nome": "Colher de Pedreiro", "categoria": "ferramentas", "unidade": "UN", "qtd": 0.0, "minimo": 0, "preco": 21.0}, {"id": 92, "nome": "Enxada Larga c/ cabo (250X300mm 1,5m)", "categoria": "ferramentas", "unidade": "UN", "qtd": 5.0, "minimo": 2, "preco": 47.4}, {"id": 93, "nome": "Enxadão Larga c/ cabo (250X300mm 2,0m)", "categoria": "ferramentas", "unidade": "UN", "qtd": 1.0, "minimo": 0, "preco": 47.4}, {"id": 94, "nome": "Escada Articulada 12 degraus 3X4", "categoria": "ferramentas", "unidade": "UN", "qtd": 1.0, "minimo": 0, "preco": 499.9}, {"id": 95, "nome": "Estilete Simples 18mm", "categoria": "ferramentas", "unidade": "UN", "qtd": 2.0, "minimo": 2, "preco": 2.6}, {"id": 96, "nome": "Facão para mato c/ cabo", "categoria": "ferramentas", "unidade": "UN", "qtd": 1.0, "minimo": 0, "preco": 37.0}, {"id": 97, "nome": "Jogo de Serra Copo", "categoria": "ferramentas", "unidade": "UN", "qtd": 1.0, "minimo": 0, "preco": 42.0}, {"id": 98, "nome": "Kit Cinta Catraca (9m)", "categoria": "ferramentas", "unidade": "UN", "qtd": 1.0, "minimo": 0, "preco": 59.0}, {"id": 99, "nome": "Lima c/ cabo", "categoria": "ferramentas", "unidade": "UN", "qtd": 2.0, "minimo": 1, "preco": 29.2}, {"id": 100, "nome": "Maçarico Multiuso", "categoria": "ferramentas", "unidade": "UN", "qtd": 1.0, "minimo": 0, "preco": 19.48}, {"id": 101, "nome": "Machado c/ Cabo", "categoria": "ferramentas", "unidade": "UN", "qtd": 1.0, "minimo": 0, "preco": 89.9}, {"id": 102, "nome": "Mangueira de Jardim Reforçada", "categoria": "ferramentas", "unidade": "M", "qtd": 0.0, "minimo": 30, "preco": 21.0}, {"id": 103, "nome": "Martelo Carpinteiro", "categoria": "ferramentas", "unidade": "UN", "qtd": 1.0, "minimo": 0, "preco": 31.0}, {"id": 104, "nome": "Martelo de Borracha", "categoria": "ferramentas", "unidade": "UN", "qtd": 1.0, "minimo": 0, "preco": 18.5}, {"id": 105, "nome": "Misturador de Combustível (1L)", "categoria": "ferramentas", "unidade": "UN", "qtd": 1.0, "minimo": 0, "preco": 35.0}, {"id": 106, "nome": "Motocultivador Stihl MH610.0", "categoria": "ferramentas", "unidade": "UN", "qtd": 1.0, "minimo": 0, "preco": 3999.0}, {"id": 107, "nome": "Motosserra Stihl MS 162", "categoria": "ferramentas", "unidade": "UN", "qtd": 1.0, "minimo": 0, "preco": 1170.0}, {"id": 108, "nome": "Multimetro Digital ET-1000 AZ", "categoria": "ferramentas", "unidade": "UN", "qtd": 2.0, "minimo": 0, "preco": 75.0}, {"id": 109, "nome": "Pá com Cabo ", "categoria": "ferramentas", "unidade": "UN", "qtd": 2.0, "minimo": 2, "preco": 75.0}, {"id": 110, "nome": "Pá para Jardinagem em Aço e Madeira", "categoria": "ferramentas", "unidade": "UN", "qtd": 0.0, "minimo": 0, "preco": 12.32}, {"id": 111, "nome": "Pá Vanga de Bico com cabo", "categoria": "ferramentas", "unidade": "UN", "qtd": 1.0, "minimo": 1, "preco": 48.0}, {"id": 112, "nome": "Picareta c/ cabo", "categoria": "ferramentas", "unidade": "UN", "qtd": 2.0, "minimo": 0, "preco": 89.8}, {"id": 113, "nome": "Pistola Aplicador de Silicone", "categoria": "ferramentas", "unidade": "UN", "qtd": 1.0, "minimo": 0, "preco": 68.0}, {"id": 114, "nome": "Polvilhadeira 1kg ", "categoria": "ferramentas", "unidade": "UN", "qtd": 0.0, "minimo": 0, "preco": 46.7}, {"id": 115, "nome": "Pulverizador com compressão prévia 20L ", "categoria": "ferramentas", "unidade": "UN", "qtd": 2.0, "minimo": 1, "preco": 29.71}, {"id": 116, "nome": "Pulverizador com compressão prévia 2L", "categoria": "ferramentas", "unidade": "UN", "qtd": 1.0, "minimo": 0, "preco": 29.71}, {"id": 117, "nome": "Pulverizador manual 500mL", "categoria": "ferramentas", "unidade": "UN", "qtd": 4.0, "minimo": 0, "preco": 6.66}, {"id": 118, "nome": "Rastelo Ferro", "categoria": "ferramentas", "unidade": "UN", "qtd": 3.0, "minimo": 2, "preco": 26.0}, {"id": 119, "nome": "Regador 1,5 L | Verde", "categoria": "ferramentas", "unidade": "UN", "qtd": 16.0, "minimo": 0, "preco": 6.37}, {"id": 120, "nome": "Regador 3,0 L | Verde", "categoria": "ferramentas", "unidade": "UN", "qtd": 0.0, "minimo": 0, "preco": 10.13}, {"id": 121, "nome": "Roçadeira Stihl FS120", "categoria": "ferramentas", "unidade": "UN", "qtd": 0.0, "minimo": 0, "preco": 1929.0}, {"id": 122, "nome": "Tesoura de Poda", "categoria": "ferramentas", "unidade": "UN", "qtd": 1.0, "minimo": 2, "preco": 27.0}, {"id": 123, "nome": "Tesoura Escritório", "categoria": "ferramentas", "unidade": "UN", "qtd": 0.0, "minimo": 0, "preco": 18.0}, {"id": 124, "nome": "Torqueza 12\"", "categoria": "ferramentas", "unidade": "UN", "qtd": 1.0, "minimo": 0, "preco": 75.0}, {"id": 125, "nome": "Trena de Aço ", "categoria": "ferramentas", "unidade": "UN", "qtd": 0.0, "minimo": 0, "preco": 25.8}, {"id": 126, "nome": "Trena Fita ", "categoria": "ferramentas", "unidade": "UN", "qtd": 1.0, "minimo": 0, "preco": 23.9}, {"id": 127, "nome": "Tubo Engraxante (80g)", "categoria": "ferramentas", "unidade": "UN", "qtd": 1.0, "minimo": 0, "preco": 30.0}, {"id": 128, "nome": "Vanga Reta", "categoria": "ferramentas", "unidade": "UN", "qtd": 4.0, "minimo": 2, "preco": 44.9}, {"id": 129, "nome": "Vassoura Grama de Plastico c/ cabo ", "categoria": "ferramentas", "unidade": "UN", "qtd": 0.0, "minimo": 0, "preco": 22.0}, {"id": 130, "nome": "Abraçadeira Nylon - Enforca Gato", "categoria": "consumo", "unidade": "PC", "qtd": 2.0, "minimo": 2.0, "preco": 6.5}, {"id": 131, "nome": "Adesivo de Poliuretano PU40 (440g)", "categoria": "consumo", "unidade": "UN", "qtd": 4.0, "minimo": 2.0, "preco": 11.34}, {"id": 132, "nome": "Arame recozido 12 / 14", "categoria": "consumo", "unidade": "KG", "qtd": 1.0, "minimo": 2.0, "preco": 29.27}, {"id": 133, "nome": "Cabo Cavadeira Articulada 1,40m", "categoria": "consumo", "unidade": "UN", "qtd": 0.0, "minimo": 2.0, "preco": 19.0}, {"id": 134, "nome": "Cabo Enxada ", "categoria": "consumo", "unidade": "UN", "qtd": 4.0, "minimo": 2.0, "preco": 21.0}, {"id": 135, "nome": "Cabo para picareta", "categoria": "consumo", "unidade": "PC", "qtd": 0.0, "minimo": 1.0, "preco": 21.75}, {"id": 136, "nome": "Cabo PP (2X2,5mm)", "categoria": "consumo", "unidade": "M", "qtd": 0.0, "minimo": 10.0, "preco": 6.1}, {"id": 137, "nome": "Camara de Ar 3.00/3.25X8\" Pneu Carriola", "categoria": "consumo", "unidade": "UN", "qtd": 0.0, "minimo": 1.0, "preco": 23.0}, {"id": 138, "nome": "Capa de Chuva Descartavel c/ capuz", "categoria": "consumo", "unidade": "UN", "qtd": 0.0, "minimo": 8.0, "preco": 5.0}, {"id": 139, "nome": "Capa de Chuva Forrada c/ capuz", "categoria": "consumo", "unidade": "UN", "qtd": 1.0, "minimo": 4.0, "preco": 5.0}, {"id": 140, "nome": "Carretel Roçadeira", "categoria": "consumo", "unidade": "UN", "qtd": 0.0, "minimo": 1.0, "preco": 60.0}, {"id": 141, "nome": "Conector Fêmea Engate Rápido", "categoria": "consumo", "unidade": "UN", "qtd": 10.0, "minimo": 4.0, "preco": 21.0}, {"id": 142, "nome": "Corda Trançada Poliester 10mm", "categoria": "consumo", "unidade": "M", "qtd": 200.0, "minimo": 20.0, "preco": 1.82}, {"id": 143, "nome": "Cunha madeira p/ cabo enxada", "categoria": "consumo", "unidade": "UN", "qtd": 10.0, "minimo": 2.0, "preco": 1.5}, {"id": 144, "nome": "Desengripante", "categoria": "consumo", "unidade": "PC", "qtd": 0.0, "minimo": 1.0, "preco": 9.85}, {"id": 145, "nome": "Disco de Corte (4.1/2 X 1,0)", "categoria": "consumo", "unidade": "PC", "qtd": 12.0, "minimo": 2.0, "preco": 1.5}, {"id": 146, "nome": "Disco Flap (4.1/2 X 1,0) - G-80", "categoria": "consumo", "unidade": "PC", "qtd": 4.0, "minimo": 2.0, "preco": 3.0}, {"id": 147, "nome": "Engate Rápido ", "categoria": "consumo", "unidade": "UN", "qtd": 13.0, "minimo": 2.0, "preco": 7.5}, {"id": 148, "nome": "Esticador p/ cabo de aco 3/16", "categoria": "consumo", "unidade": "UN", "qtd": 0.0, "minimo": 0.0, "preco": 7.0}, {"id": 149, "nome": "Estopa Branca", "categoria": "consumo", "unidade": "PC", "qtd": 0.0, "minimo": 0.0, "preco": 7.45}, {"id": 150, "nome": "Filme Stretch", "categoria": "consumo", "unidade": "kg", "qtd": 0.0, "minimo": 1.0, "preco": 15.9}, {"id": 151, "nome": "Fio de Nylon (Cortador de Grama)", "categoria": "consumo", "unidade": "M", "qtd": 10.0, "minimo": 5.0, "preco": 0.9}, {"id": 152, "nome": "Fita Crepe Larga", "categoria": "consumo", "unidade": "UN", "qtd": 9.0, "minimo": 5.0, "preco": 3.18}, {"id": 153, "nome": "Fita Dupla Face", "categoria": "consumo", "unidade": "UN", "qtd": 0.0, "minimo": 4.0, "preco": 13.0}, {"id": 154, "nome": "Fita Isolante Auto Fusão", "categoria": "consumo", "unidade": "PC", "qtd": 6.0, "minimo": 2.0, "preco": 24.0}, {"id": 155, "nome": "Fita Isolante G", "categoria": "consumo", "unidade": "UN", "qtd": 7.0, "minimo": 4.0, "preco": 6.77}, {"id": 156, "nome": "Fita Larga Transparente", "categoria": "consumo", "unidade": "UN", "qtd": 0.0, "minimo": 2.0, "preco": 4.9}, {"id": 157, "nome": "Fita Veda Rosca", "categoria": "consumo", "unidade": "UN", "qtd": 62.0, "minimo": 4.0, "preco": 6.5}, {"id": 158, "nome": "Fitilho", "categoria": "consumo", "unidade": "PC", "qtd": 1.0, "minimo": 1.0, "preco": 6.5}, {"id": 159, "nome": "Fluido para Radiador", "categoria": "consumo", "unidade": "L", "qtd": 0.0, "minimo": 0.0, "preco": 6.5}, {"id": 160, "nome": "Gás Butano 227G", "categoria": "consumo", "unidade": "PC", "qtd": 0.0, "minimo": 1.0, "preco": 15.0}, {"id": 161, "nome": "IMOBILIZADOS", "categoria": "consumo", "unidade": "UN", "qtd": 0.0, "minimo": 0.0, "preco": 19.43}, {"id": 162, "nome": "Linha de Pedreiro", "categoria": "consumo", "unidade": "UN", "qtd": 0.0, "minimo": 1.0, "preco": 9.96}, {"id": 163, "nome": "Lixa para Ferro (G100 ou G80)", "categoria": "consumo", "unidade": "UN", "qtd": 21.0, "minimo": 10.0, "preco": 3.25}, {"id": 164, "nome": "Lona Preta (20KG) - 4x110", "categoria": "consumo", "unidade": "m", "qtd": 110.0, "minimo": 110.0, "preco": 0.52}, {"id": 165, "nome": "Óleo para corrente - Motosserra", "categoria": "consumo", "unidade": "FR", "qtd": 1.0, "minimo": 1.0, "preco": 42.0}, {"id": 166, "nome": "Óleo Sthil 8017H 2T - Roçadeira, Motosserra, Perfurador e Soprador", "categoria": "consumo", "unidade": "UN", "qtd": 5.0, "minimo": 2.0, "preco": 45.0}, {"id": 167, "nome": "Óleo Sthtil 4T (10W30) - Motocultivador", "categoria": "consumo", "unidade": "UN", "qtd": 1.0, "minimo": 1.0, "preco": 50.0}, {"id": 168, "nome": "Pasta Lubrificante (160g)", "categoria": "consumo", "unidade": "UN", "qtd": 0.0, "minimo": 1.0, "preco": 13.0}, {"id": 169, "nome": "Pilha Alcalina AA", "categoria": "consumo", "unidade": "UN", "qtd": 0.0, "minimo": 0.0, "preco": 1.83}, {"id": 170, "nome": "Pilha Alcalina AAA", "categoria": "consumo", "unidade": "UN", "qtd": 0.0, "minimo": 0.0, "preco": 1.62}, {"id": 171, "nome": "Pilha Bateria CR2032", "categoria": "consumo", "unidade": "UN", "qtd": 0.0, "minimo": 0.0, "preco": 1.2}, {"id": 172, "nome": "Plug Macho Tomada Industrial (2P+T) 16A 220V", "categoria": "consumo", "unidade": "PC", "qtd": 1.0, "minimo": 2.0, "preco": 25.0}, {"id": 173, "nome": "Pneu 3.25/3.00X8 capacidade 100KG (4 LONAS)", "categoria": "consumo", "unidade": "UN", "qtd": 0.0, "minimo": 0.0, "preco": 42.0}, {"id": 174, "nome": "Prego 17x27 1kg", "categoria": "consumo", "unidade": "UN", "qtd": 0.0, "minimo": 0.0, "preco": 13.62}, {"id": 175, "nome": "Sacaria de ráfia - 45x60", "categoria": "consumo", "unidade": "UN", "qtd": 0.0, "minimo": 0.0, "preco": 1.23}, {"id": 176, "nome": "Serra Manual Starrett", "categoria": "consumo", "unidade": "UN", "qtd": 4.0, "minimo": 4.0, "preco": 12.65}, {"id": 177, "nome": "Tinta Spray Preto Fosco", "categoria": "consumo", "unidade": "UN", "qtd": 6.0, "minimo": 4.0, "preco": 18.75}, {"id": 178, "nome": "Torneira Plástica Jardim 1/2\" e 3/4\"", "categoria": "consumo", "unidade": "UN", "qtd": 10.0, "minimo": 2.0, "preco": 2.25}];
 
-function StatusBadge({ qtd, minimo }) {
-  if (minimo === 0) return React.createElement('span', {style:{background:"#1e2f22",color:"#5a7a62",padding:"2px 10px",borderRadius:20,fontSize:11,fontWeight:700}}, "SEM MÍNIMO");
-  const pct = qtd / minimo;
-  if (qtd <= 0) return React.createElement('span', {style:{background:"#3d0000",color:"#ff6b6b",padding:"2px 10px",borderRadius:20,fontSize:11,fontWeight:700}}, "SEM ESTOQUE");
-  if (pct <= 0.5) return React.createElement('span', {style:{background:"#3d1a00",color:"#ffaa44",padding:"2px 10px",borderRadius:20,fontSize:11,fontWeight:700}}, "⚠ CRÍTICO");
-  if (pct <= 1) return React.createElement('span', {style:{background:"#2d2a00",color:"#ffe566",padding:"2px 10px",borderRadius:20,fontSize:11,fontWeight:700}}, "REPOR");
-  return React.createElement('span', {style:{background:"#0d2e1a",color:"#5dca8a",padding:"2px 10px",borderRadius:20,fontSize:11,fontWeight:700}}, "OK");
-}
-
-async function enviarAlertaEmail(item, cfg) {
-  try {
-    const resp = await fetch("https://api.emailjs.com/api/v1.0/email/send", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        service_id: cfg.serviceId,
-        template_id: cfg.templateId,
-        user_id: cfg.publicKey,
-        template_params: {
-          item_nome: item.nome,
-          qtd_atual: item.qtd + " " + item.unidade,
-          qtd_minimo: item.minimo + " " + item.unidade,
-          categoria: CATEGORIAS[item.categoria]?.label || item.categoria,
-        },
-      }),
-    });
-    return resp.ok;
-  } catch { return false; }
-}
+// ===== ESTILOS INLINE =====
+const S = {
+  hdr: { background:'#2C3E2D', padding:'16px 20px 0', position:'sticky', top:0, zIndex:100 },
+  hdrTop: { display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:4 },
+  logo: { fontSize:13, fontWeight:600, letterSpacing:2, color:'#C49A6C', textTransform:'uppercase' },
+  hdrSub: { fontSize:18, fontWeight:300, color:'#FDFCF9', letterSpacing:-0.3, marginBottom:10 },
+  nav: { display:'flex', borderTop:'1px solid rgba(255,255,255,0.08)', overflowX:'auto' },
+  nb: (ativo) => ({ flex:1, minWidth:70, padding:'10px 4px', background:'none', border:'none', color: ativo?'#C49A6C':'#7A9E76', fontFamily:'DM Sans,sans-serif', fontSize:11, fontWeight:500, cursor:'pointer', borderBottom: ativo?'2px solid #C49A6C':'2px solid transparent', whiteSpace:'nowrap' }),
+  body: { padding:20 },
+  card: (border) => ({ background:'#FDFCF9', borderRadius:14, padding:16, marginBottom:12, border: border||'1px solid #E8E0D0' }),
+  stit: { fontSize:11, fontWeight:600, letterSpacing:1.5, textTransform:'uppercase', color:'#6B7B6C', marginBottom:12, display:'block' },
+  inp: { width:'100%', padding:'12px 14px', border:'1.5px solid #E8E0D0', borderRadius:10, fontFamily:'DM Sans,sans-serif', fontSize:14, color:'#1E2B1F', background:'#FDFCF9', outline:'none' },
+  sel: { width:'100%', padding:'12px 14px', border:'1.5px solid #E8E0D0', borderRadius:10, fontFamily:'DM Sans,sans-serif', fontSize:14, color:'#1E2B1F', background:'#FDFCF9', outline:'none' },
+  btnPrim: { width:'100%', padding:14, background:'#2C3E2D', color:'#FDFCF9', border:'none', borderRadius:12, fontFamily:'DM Sans,sans-serif', fontSize:14, fontWeight:500, cursor:'pointer' },
+  btnSec: (cor) => ({ padding:'7px 14px', background: cor||'#F5F0E8', color:'#1E2B1F', border:'1px solid #E8E0D0', borderRadius:8, fontFamily:'DM Sans,sans-serif', fontSize:12, fontWeight:500, cursor:'pointer' }),
+  btnEntrada: { padding:'6px 12px', background:'#E8F4E8', color:'#27AE60', border:'none', borderRadius:8, fontFamily:'DM Sans,sans-serif', fontSize:12, fontWeight:600, cursor:'pointer' },
+  btnSaida: { padding:'6px 12px', background:'#FDEDEC', color:'#C0392B', border:'none', borderRadius:8, fontFamily:'DM Sans,sans-serif', fontSize:12, fontWeight:600, cursor:'pointer' },
+  overlay: { position:'fixed', inset:0, background:'rgba(30,43,31,.7)', zIndex:200, display:'flex', alignItems:'flex-end' },
+  modal: { background:'#FDFCF9', borderRadius:'20px 20px 0 0', width:'100%', maxHeight:'90vh', overflowY:'auto', padding:24 },
+  label: { fontSize:12, fontWeight:500, color:'#6B7B6C', marginBottom:6, display:'block', letterSpacing:0.3 },
+  badge: (cat) => {
+    const cores = { insumos:{bg:'#E8F4E8',txt:'#4A6741'}, ferramentas:{bg:'#FFF3E0',txt:'#A67C52'}, epis:{bg:'#FDE8E0',txt:'#b85c2a'}, consumo:{bg:'#E0F0FD',txt:'#2a6b8b'} };
+    const c = cores[cat]||{bg:'#E8E0D0',txt:'#6B7B6C'};
+    return { fontSize:10, fontWeight:600, padding:'2px 8px', borderRadius:20, background:c.bg, color:c.txt, whiteSpace:'nowrap' };
+  },
+  statusBadge: (qtd, min) => {
+    if (min===0) return { background:'#F5F0E8', color:'#6B7B6C', padding:'2px 10px', borderRadius:20, fontSize:10, fontWeight:700 };
+    const pct = qtd/min;
+    if (qtd<=0) return { background:'#FDEDEC', color:'#C0392B', padding:'2px 10px', borderRadius:20, fontSize:10, fontWeight:700 };
+    if (pct<=0.5) return { background:'#FFF3E0', color:'#E67E22', padding:'2px 10px', borderRadius:20, fontSize:10, fontWeight:700 };
+    if (pct<=1) return { background:'#FFFDE0', color:'#B7950B', padding:'2px 10px', borderRadius:20, fontSize:10, fontWeight:700 };
+    return { background:'#E8F4E8', color:'#27AE60', padding:'2px 10px', borderRadius:20, fontSize:10, fontWeight:700 };
+  },
+  statusTxt: (qtd, min) => {
+    if (min===0) return 'SEM MÍN';
+    const pct = qtd/min;
+    if (qtd<=0) return 'ZERADO';
+    if (pct<=0.5) return '⚠ CRÍTICO';
+    if (pct<=1) return 'REPOR';
+    return 'OK';
+  },
+  fmtR: (v) => 'R$ '+(v||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}),
+};
 
 function App() {
-  const [itens, setItens] = useState(ESTOQUE_INICIAL);
+  const [itens, setItens] = useState([]);
   const [movimentos, setMovimentos] = useState([]);
-  const [aba, setAba] = useState("dashboard");
-  const [catFiltro, setCatFiltro] = useState("todas");
-  const [busca, setBusca] = useState("");
+  const [requisicoes, setRequisicoes] = useState([]);
+  const [carregando, setCarregando] = useState(true);
+
+  // ===== FIREBASE: listeners em tempo real =====
+  useEffect(() => {
+    // Itens — se a coleção estiver vazia, popular com ESTOQUE_INICIAL
+    const unsubItens = db.collection('estoque_itens').onSnapshot(snap => {
+      if (snap.empty) {
+        // Primeira vez: popular o Firebase com os itens iniciais
+        const batch = db.batch();
+        ESTOQUE_INICIAL.forEach(item => {
+          batch.set(db.collection('estoque_itens').doc(String(item.id)), item);
+        });
+        batch.commit();
+      } else {
+        const arr = snap.docs.map(d => d.data());
+        arr.sort((a,b) => a.nome.localeCompare(b.nome));
+        setItens(arr);
+      }
+      setCarregando(false);
+    });
+
+    const unsubMovs = db.collection('estoque_movimentos').onSnapshot(snap => {
+      const arr = snap.docs.map(d => d.data());
+      arr.sort((a,b) => b.id - a.id);
+      setMovimentos(arr);
+    });
+
+    const unsubReqs = db.collection('estoque_requisicoes').onSnapshot(snap => {
+      const arr = snap.docs.map(d => d.data());
+      arr.sort((a,b) => b.id - a.id);
+      setRequisicoes(arr);
+    });
+
+    return () => { unsubItens(); unsubMovs(); unsubReqs(); };
+  }, []);
+
+  // ===== FIREBASE: funções de salvar =====
+  function fbSalvarItem(item) {
+    db.collection('estoque_itens').doc(String(item.id)).set(item).catch(e=>console.warn(e));
+  }
+  function fbSalvarMovimento(mov) {
+    db.collection('estoque_movimentos').doc(String(mov.id)).set(mov).catch(e=>console.warn(e));
+  }
+  function fbSalvarRequisicao(req) {
+    db.collection('estoque_requisicoes').doc(String(req.id)).set(req).catch(e=>console.warn(e));
+  }
+  const [novaReq, setNovaReq] = useState({solicitante:'',descricao:'',link:'',urgencia:'normal'});
+  const [reqItens, setReqItens] = useState([]); // lista de itens da requisição atual
+  const [itemTemp, setItemTemp] = useState({nome:'',qtd:1});
+  const [aba, setAba] = useState('dashboard');
+  const [catFiltro, setCatFiltro] = useState('todas');
+  const [alertaCat, setAlertaCat] = useState('todas');
+  const [busca, setBusca] = useState('');
   const [modal, setModal] = useState(null);
   const [form, setForm] = useState({});
-  const [novoItem, setNovoItem] = useState({ nome:"", categoria:"insumos", unidade:"UN", qtd:0, minimo:0, preco:0 });
-  const [emailConfig, setEmailConfig] = useState({ serviceId: EMAILJS_SERVICE_ID, templateId: EMAILJS_TEMPLATE_ID, publicKey: EMAILJS_PUBLIC_KEY });
-  const [emailStatus, setEmailStatus] = useState("");
-  const [abaConfig, setAbaConfig] = useState(false);
-  const [alertaCatFiltro, setAlertaCatFiltro] = useState("todas");
+  const [novoItem, setNovoItem] = useState({nome:'',categoria:'insumos',unidade:'UN',qtd:0,minimo:0,preco:0});
+  const [toast, setToast] = useState('');
 
-  const itensFiltrados = useMemo(() => itens.filter(i =>
-    (catFiltro === "todas" || i.categoria === catFiltro) &&
+  function adicionarItemReq() {
+    if (!itemTemp.nome.trim()) return alert('Informe o item.');
+    const qtd = Number(itemTemp.qtd) || 1;
+    setReqItens([...reqItens, { nome: itemTemp.nome.trim(), qtd }]);
+    setItemTemp({nome:'',qtd:1});
+  }
+
+  function removerItemReq(idx) {
+    setReqItens(reqItens.filter((_, i) => i !== idx));
+  }
+
+  function enviarRequisicao() {
+    if (!novaReq.solicitante.trim()) return alert('Informe seu nome.');
+    if (reqItens.length === 0) return alert('Adicione pelo menos um item à requisição.');
+    const req = {
+      id: Date.now(),
+      solicitante: novaReq.solicitante.trim(),
+      itens: reqItens,
+      descricao: novaReq.descricao.trim(),
+      link: novaReq.link.trim(),
+      urgencia: novaReq.urgencia,
+      data: new Date().toLocaleDateString('pt-BR'),
+      hora: new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}),
+      status: 'pendente'
+    };
+    fbSalvarRequisicao(req);
+    setNovaReq({solicitante:'',descricao:'',link:'',urgencia:'normal'});
+    setReqItens([]);
+    setItemTemp({nome:'',qtd:1});
+    showToast('Requisição enviada ✓');
+  }
+
+  function atualizarStatusReq(id, status) {
+    const req = requisicoes.find(r=>r.id===id);
+    if (req) fbSalvarRequisicao({...req, status});
+    showToast(status==='aprovada'?'Requisição aprovada ✓':'Requisição recusada');
+  }
+
+  const reqPendentes = requisicoes.filter(r=>r.status==='pendente');
+
+  function showToast(msg) {
+    setToast(msg);
+    setTimeout(()=>setToast(''), 2500);
+  }
+
+  const itensFiltrados = useMemo(()=>itens.filter(i=>
+    (catFiltro==='todas'||i.categoria===catFiltro) &&
     i.nome.toLowerCase().includes(busca.toLowerCase())
-  ), [itens, catFiltro, busca]);
+  ),[itens,catFiltro,busca]);
 
-  const alertas = useMemo(() => itens.filter(i => i.minimo > 0 && i.qtd <= i.minimo), [itens]);
-  const alertasFiltrados = useMemo(() => alertas.filter(i => alertaCatFiltro === "todas" || i.categoria === alertaCatFiltro), [alertas, alertaCatFiltro]);
-  const totalValor = itens.reduce((s, i) => s + i.qtd * i.preco, 0);
+  const alertas = useMemo(()=>itens.filter(i=>i.minimo>0&&i.qtd<=i.minimo),[itens]);
+  const alertasFilt = useMemo(()=>alertas.filter(i=>alertaCat==='todas'||i.categoria===alertaCat),[alertas,alertaCat]);
+  const totalValor = itens.reduce((s,i)=>s+i.qtd*i.preco,0);
 
-  function irParaAlertas(cat) { setAba("alertas"); setAbaConfig(false); setAlertaCatFiltro(cat || "todas"); }
-
-  async function registrarMovimento() {
-    const { tipo, qtd, responsavel, obs } = form;
+  function registrarMovimento() {
+    const {tipo,qtd,responsavel,obs} = form;
     const q = Number(qtd);
-    if (!tipo || !q || !responsavel) return alert("Preencha todos os campos obrigatórios.");
-    if (tipo === "saida" && q > modal.item.qtd) return alert("Quantidade insuficiente em estoque.");
-    const novaQtd = tipo === "entrada" ? modal.item.qtd + q : modal.item.qtd - q;
-    const itemAtualizado = { ...modal.item, qtd: novaQtd };
-    setItens(prev => prev.map(i => i.id === modal.item.id ? itemAtualizado : i));
-    setMovimentos(prev => [{ id: Date.now(), itemId: modal.item.id, tipo, qtd: q, responsavel, data: new Date().toISOString().split("T")[0], obs: obs || "" }, ...prev]);
-    if (tipo === "saida" && itemAtualizado.minimo > 0 && novaQtd <= itemAtualizado.minimo) {
-      setEmailStatus("enviando");
-      const ok = await enviarAlertaEmail(itemAtualizado, emailConfig);
-      setEmailStatus(ok ? "enviado" : "erro");
-      setTimeout(() => setEmailStatus(""), 4000);
-    }
-    setModal(null); setForm({});
+    if (!tipo||!q||!responsavel) return alert('Preencha todos os campos obrigatórios.');
+    if (tipo==='saida'&&q>modal.item.qtd) return alert('Quantidade insuficiente em estoque.');
+    const novaQtd = tipo==='entrada' ? modal.item.qtd+q : modal.item.qtd-q;
+    const itemAtualizado = {...modal.item, qtd:novaQtd};
+    const novoMov = { id:Date.now(), itemId:modal.item.id, tipo, qtd:q, responsavel, obs:obs||'', data:new Date().toLocaleDateString('pt-BR') };
+    fbSalvarItem(itemAtualizado);
+    fbSalvarMovimento(novoMov);
+    setModal(null);
+    setForm({});
+    showToast(tipo==='entrada'?'Entrada registrada ✓':'Saída registrada ✓');
   }
 
   function adicionarItem() {
-    if (!novoItem.nome) return alert("Informe o nome do item.");
-    setItens(prev => [...prev, { ...novoItem, id: Date.now(), qtd: Number(novoItem.qtd), minimo: Number(novoItem.minimo), preco: Number(novoItem.preco) }]);
-    setNovoItem({ nome:"", categoria:"insumos", unidade:"UN", qtd:0, minimo:0, preco:0 });
+    if (!novoItem.nome.trim()) return alert('Informe o nome do item.');
+    const novo = {...novoItem, id:Date.now(), qtd:Number(novoItem.qtd), minimo:Number(novoItem.minimo), preco:Number(novoItem.preco)};
+    fbSalvarItem(novo);
     setModal(null);
+    setNovoItem({nome:'',categoria:'insumos',unidade:'UN',qtd:0,minimo:0,preco:0});
+    showToast('Item adicionado ✓');
   }
 
-  const s = {
-    header: { background:"#16241a", borderBottom:"1px solid #2a3d2e", padding:"14px 20px", display:"flex", alignItems:"center", justifyContent:"space-between", flexWrap:"wrap", gap:8 },
-    nav: { display:"flex", gap:4, flexWrap:"wrap" },
-    navBtn: (a) => ({ background: a?"#2a4a33":"transparent", color: a?"#7ecf96":"#6b8f72", border:"none", padding:"7px 13px", borderRadius:8, cursor:"pointer", fontWeight:600, fontSize:12 }),
-    main: { padding:"20px", maxWidth:1100, margin:"0 auto" },
-    grid: { display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(180px,1fr))", gap:14, marginBottom:20 },
-    card: (cor) => ({ background:"#16241a", border:`1px solid ${cor||"#2a3d2e"}`, borderRadius:12, padding:18 }),
-    input: { background:"#1e2f22", border:"1px solid #2a3d2e", borderRadius:8, padding:"8px 12px", color:"#d4e8d0", fontSize:13, outline:"none", width:"100%" },
-    select: { background:"#1e2f22", border:"1px solid #2a3d2e", borderRadius:8, padding:"8px 12px", color:"#d4e8d0", fontSize:13, outline:"none", cursor:"pointer" },
-    btn: (cor) => ({ background:cor||"#2a7a45", color:"#fff", border:"none", borderRadius:8, padding:"8px 16px", cursor:"pointer", fontWeight:600, fontSize:12 }),
-    th: { textAlign:"left", padding:"9px 10px", color:"#5a7a62", fontSize:11, fontWeight:700, textTransform:"uppercase", borderBottom:"1px solid #2a3d2e" },
-    td: { padding:"10px", borderBottom:"1px solid #1e2f22", fontSize:13, verticalAlign:"middle" },
-    overlay: { position:"fixed", inset:0, background:"rgba(0,0,0,0.75)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:100, padding:16 },
-    modal: { background:"#16241a", border:"1px solid #2a4a33", borderRadius:16, padding:24, width:420, maxWidth:"100%", maxHeight:"90vh", overflowY:"auto" },
-    label: { display:"block", color:"#6b8f72", fontSize:11, fontWeight:700, marginBottom:4, marginTop:12 },
-    badge: (cat) => ({ background:(CATEGORIAS[cat]?.cor||"#555")+"33", color:CATEGORIAS[cat]?.cor||"#aaa", padding:"2px 9px", borderRadius:20, fontSize:11, fontWeight:700, display:"inline-block" }),
-  };
-
-  const toast = emailStatus === "enviando" ? {bg:"#1e3a2a",bord:"#4a7c59",color:"#7ecf96",txt:"📧 Enviando alerta..."}
-    : emailStatus === "enviado" ? {bg:"#0d2e1a",bord:"#5dca8a",color:"#5dca8a",txt:"✅ Alerta enviado!"}
-    : emailStatus === "erro" ? {bg:"#2e0d0d",bord:"#c0392b",color:"#ff6b6b",txt:"⚠ Configure o EmailJS"}
-    : null;
+  // ===== RENDER =====
+  if (carregando) {
+    return (
+      <div style={{minHeight:'100vh',background:'#F5F0E8',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center'}}>
+        <div style={{fontSize:40,marginBottom:12}}>🌿</div>
+        <div style={{fontFamily:'DM Sans,sans-serif',fontSize:15,color:'#6B7B6C'}}>Carregando estoque...</div>
+      </div>
+    );
+  }
 
   return (
-    <div style={{minHeight:"100vh",background:"#0e1a12",color:"#d4e8d0"}}>
-      {toast && <div style={{position:"fixed",top:16,right:16,background:toast.bg,border:`1px solid ${toast.bord}`,borderRadius:10,padding:"10px 18px",color:toast.color,zIndex:200,fontSize:13}}>{toast.txt}</div>}
+    <div style={{minHeight:'100vh',background:'#F5F0E8',paddingBottom:80}}>
 
-      <div style={s.header}>
-        <div style={{display:"flex",alignItems:"center",gap:10}}>
-          <span style={{fontSize:24}}>🌿</span>
-          <div>
-            <div style={{fontSize:18,fontWeight:800,color:"#7ecf96"}}>Estoque_INDOOR</div>
-            <div style={{fontSize:11,color:"#5a7a62"}}>151 itens · 4 categorias</div>
-          </div>
+      {/* HEADER */}
+      <div style={S.hdr}>
+        <div style={S.hdrTop}>
+          <span style={S.logo}>INDOOR</span>
+          <span style={{fontFamily:'DM Mono,monospace',fontSize:11,color:'#7A9E76'}}>
+            {new Date().toLocaleDateString('pt-BR',{weekday:'short',day:'2-digit',month:'2-digit'})}
+          </span>
         </div>
-        <div style={s.nav}>
-          {[["dashboard","📊 Dashboard"],["estoque","📦 Estoque"],["movimentos","📋 Movimentos"],["alertas","🚨 Alertas"]].map(([id,label]) => (
-            <button key={id} style={s.navBtn(aba===id&&!abaConfig)} onClick={()=>{setAba(id);setAbaConfig(false);}}>
-              {label}{id==="alertas"&&alertas.length>0&&<span style={{background:"#c0392b",borderRadius:10,padding:"1px 5px",fontSize:10,marginLeft:4}}>{alertas.length}</span>}
+        <div style={S.hdrSub}>Controle de Estoque</div>
+        <div style={S.nav}>
+          {['dashboard','estoque','alertas','movimentos','requisicao'].map(a=>(
+            <button key={a} style={S.nb(aba===a)} onClick={()=>setAba(a)}>
+              {a==='dashboard'?'Dashboard':a==='estoque'?'Estoque':a==='alertas'?`Alertas${alertas.length>0?` (${alertas.length})`:''}`:a==='movimentos'?'Histórico':'Requisições'}
             </button>
           ))}
-          <button style={s.navBtn(abaConfig)} onClick={()=>setAbaConfig(!abaConfig)}>⚙ EmailJS</button>
         </div>
       </div>
 
-      <div style={s.main}>
+      <div style={S.body}>
 
-        {abaConfig && (
-          <div style={s.card()}>
-            <div style={{fontSize:16,fontWeight:800,color:"#7ecf96",marginBottom:16}}>⚙ Configuração EmailJS</div>
-            <p style={{color:"#6b8f72",fontSize:13,marginBottom:16}}>Cole aqui seus dados do EmailJS para ativar os alertas automáticos por e-mail.</p>
-            {[["Service ID","serviceId"],["Template ID","templateId"],["Public Key","publicKey"]].map(([lbl,key]) => (
-              <div key={key}>
-                <label style={s.label}>{lbl}</label>
-                <input style={s.input} value={emailConfig[key]} placeholder={`Digite seu ${lbl}`} onChange={e=>setEmailConfig(c=>({...c,[key]:e.target.value}))} />
-              </div>
-            ))}
-            <button style={{...s.btn(),marginTop:18}} onClick={()=>{alert("Configuração salva!");setAbaConfig(false);}}>Salvar</button>
-            <div style={{marginTop:16,background:"#0e1a12",borderRadius:8,padding:14,fontSize:12,color:"#5a7a62",lineHeight:1.8}}>
-              <strong style={{color:"#7ecf96"}}>Como configurar:</strong><br/>
-              1. Acesse <strong>emailjs.com</strong> e crie conta gratuita<br/>
-              2. Email Services → Add New Service → Gmail<br/>
-              3. Email Templates → Create com variáveis: {"{item_nome}"} {"{qtd_atual}"} {"{qtd_minimo}"} {"{categoria}"}<br/>
-              4. Account → General → copie a Public Key
-            </div>
-          </div>
-        )}
-
-        {!abaConfig && aba==="dashboard" && (
+        {/* DASHBOARD */}
+        {aba==='dashboard' && (
           <>
-            <div style={s.grid}>
-              <div style={s.card()}><div style={{fontSize:28,fontWeight:800,color:"#7ecf96"}}>{itens.length}</div><div style={{fontSize:12,color:"#6b8f72",marginTop:3}}>📦 Itens cadastrados</div></div>
-              <div style={s.card(alertas.length>0?"#c0392b33":undefined)}><div style={{fontSize:28,fontWeight:800,color:alertas.length>0?"#ff6b6b":"#7ecf96"}}>{alertas.length}</div><div style={{fontSize:12,color:"#6b8f72",marginTop:3}}>⚠ Itens para repor</div></div>
-              <div style={s.card()}><div style={{fontSize:28,fontWeight:800,color:"#7ecf96"}}>R$ {totalValor.toLocaleString("pt-BR",{minimumFractionDigits:0,maximumFractionDigits:0})}</div><div style={{fontSize:12,color:"#6b8f72",marginTop:3}}>💰 Valor em estoque</div></div>
-              <div style={s.card()}><div style={{fontSize:28,fontWeight:800,color:"#7ecf96"}}>{movimentos.length}</div><div style={{fontSize:12,color:"#6b8f72",marginTop:3}}>🔄 Movimentações</div></div>
+            {/* Resumo valor */}
+            <div style={{background:'#2C3E2D',borderRadius:14,padding:16,marginBottom:20,color:'#FDFCF9'}}>
+              <div style={{fontSize:11,color:'#7A9E76',letterSpacing:1,marginBottom:4}}>VALOR TOTAL EM ESTOQUE</div>
+              <div style={{fontFamily:'DM Mono,monospace',fontSize:28,fontWeight:500}}>{S.fmtR(totalValor)}</div>
+              <div style={{fontSize:12,color:'#7A9E76',marginTop:4}}>{itens.length} itens cadastrados</div>
             </div>
-            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(200px,1fr))",gap:14}}>
-              {Object.entries(CATEGORIAS).map(([key,cat]) => {
+
+            {/* Cards por categoria */}
+            <span style={S.stit}>Por categoria</span>
+            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginBottom:20}}>
+              {Object.entries(CATEGORIAS).map(([key,cat])=>{
                 const itCat = itens.filter(i=>i.categoria===key);
-                const alts = itCat.filter(i=>i.minimo>0&&i.qtd<=i.minimo);
-                const clicavel = alts.length > 0;
+                const alts = alertas.filter(i=>i.categoria===key);
+                const handleClick = () => {
+                  if (key==='insumos') { setAba('estoque'); setCatFiltro('insumos'); }
+                  else if (alts.length>0) { setAba('alertas'); setAlertaCat(key); }
+                  else { setAba('estoque'); setCatFiltro(key); }
+                };
                 return (
-                  <div key={key} onClick={()=>clicavel&&irParaAlertas(key)}
-                    style={{...s.card(),borderColor:clicavel?"#ffaa44aa":cat.cor+"66",cursor:clicavel?"pointer":"default"}}
-                    onMouseEnter={e=>{if(clicavel)e.currentTarget.style.opacity="0.75";}}
-                    onMouseLeave={e=>{e.currentTarget.style.opacity="1";}}>
-                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
+                  <div key={key} style={{...S.card(), borderLeft:`3px solid`, borderLeftColor:cat.cor, cursor:'pointer'}}
+                    onClick={handleClick}>
+                    <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:8}}>
                       <span style={{fontSize:20}}>{cat.emoji}</span>
-                      <span style={s.badge(key)}>{cat.label}</span>
+                      <span style={S.badge(key)}>{cat.label}</span>
                     </div>
-                    <div style={{fontSize:26,fontWeight:800,color:cat.cor}}>{itCat.length}</div>
-                    <div style={{color:"#6b8f72",fontSize:12}}>
-                      itens · {alts.length>0
-                        ? <span style={{color:"#ffaa44"}}>{alts.length} para repor 👆</span>
-                        : <span style={{color:"#5dca8a"}}>tudo OK</span>}
+                    <div style={{fontFamily:'DM Mono,monospace',fontSize:24,fontWeight:500,color:'#2C3E2D'}}>{itCat.length}</div>
+                    <div style={{fontSize:11,color:'#6B7B6C',marginTop:2}}>
+                      {alts.length>0
+                        ? <span style={{color:'#E67E22'}}>⚠ {alts.length} para repor</span>
+                        : <span style={{color:'#27AE60'}}>tudo OK</span>}
                     </div>
                   </div>
                 );
               })}
             </div>
-          </>
-        )}
 
-        {!abaConfig && aba==="estoque" && (
-          <>
-            <div style={{display:"flex",gap:10,marginBottom:16,flexWrap:"wrap",alignItems:"center"}}>
-              <input placeholder="🔍 Buscar item..." style={{...s.input,flex:1,minWidth:140}} value={busca} onChange={e=>setBusca(e.target.value)} />
-              <select style={s.select} value={catFiltro} onChange={e=>setCatFiltro(e.target.value)}>
-                <option value="todas">Todas as categorias</option>
-                {Object.entries(CATEGORIAS).map(([k,v]) => <option key={k} value={k}>{v.emoji} {v.label}</option>)}
-              </select>
-              <button style={s.btn()} onClick={()=>setModal({tipo:"addItem"})}>+ Novo Item</button>
-            </div>
-            <div style={{...s.card(),overflowX:"auto"}}>
-              <table style={{width:"100%",borderCollapse:"collapse"}}>
-                <thead><tr>
-                  {["Item","Categoria","Qtd Atual","Mínimo","Status","Ações"].map(h=><th key={h} style={s.th}>{h}</th>)}
-                </tr></thead>
-                <tbody>
-                  {itensFiltrados.map(item => (
-                    <tr key={item.id}>
-                      <td style={s.td}><strong>{item.nome}</strong></td>
-                      <td style={s.td}><span style={s.badge(item.categoria)}>{CATEGORIAS[item.categoria]?.emoji} {CATEGORIAS[item.categoria]?.label}</span></td>
-                      <td style={s.td}><strong style={{color:item.minimo>0&&item.qtd<=item.minimo?"#ffaa44":"#7ecf96"}}>{item.qtd}</strong> <span style={{color:"#5a7a62",fontSize:11}}>{item.unidade}</span></td>
-                      <td style={s.td}><span style={{color:"#5a7a62"}}>{item.minimo>0?item.minimo+" "+item.unidade:"—"}</span></td>
-                      <td style={s.td}><StatusBadge qtd={item.qtd} minimo={item.minimo} /></td>
-                      <td style={s.td}>
-                        <button style={{...s.btn("#1a4a2a"),marginRight:5,padding:"5px 10px"}} onClick={()=>{setModal({tipo:"movimento",item});setForm({tipo:"entrada"});}}>↑ Entrada</button>
-                        <button style={{...s.btn("#3a2010"),padding:"5px 10px"}} onClick={()=>{setModal({tipo:"movimento",item});setForm({tipo:"saida"});}}>↓ Saída</button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </>
-        )}
-
-        {!abaConfig && aba==="movimentos" && (
-          <div style={{...s.card(),overflowX:"auto"}}>
-            {movimentos.length===0
-              ? <div style={{textAlign:"center",padding:48,color:"#5a7a62"}}>Nenhuma movimentação registrada ainda.</div>
-              : <table style={{width:"100%",borderCollapse:"collapse"}}>
-                  <thead><tr>{["Data","Item","Tipo","Qtd","Responsável","Obs"].map(h=><th key={h} style={s.th}>{h}</th>)}</tr></thead>
-                  <tbody>
-                    {movimentos.map(m => {
-                      const item = itens.find(i=>i.id===m.itemId);
-                      return (
-                        <tr key={m.id}>
-                          <td style={s.td}>{m.data}</td>
-                          <td style={s.td}>{item?.nome||"—"}</td>
-                          <td style={s.td}><span style={{background:m.tipo==="entrada"?"#0d2e1a":"#2e0d0d",color:m.tipo==="entrada"?"#5dca8a":"#ff6b6b",padding:"2px 9px",borderRadius:20,fontSize:11,fontWeight:700}}>{m.tipo==="entrada"?"↑ ENTRADA":"↓ SAÍDA"}</span></td>
-                          <td style={s.td}><strong>{m.qtd}</strong> {item?.unidade}</td>
-                          <td style={s.td}>{m.responsavel}</td>
-                          <td style={{...s.td,color:"#6b8f72"}}>{m.obs||"—"}</td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-            }
-          </div>
-        )}
-
-        {!abaConfig && aba==="alertas" && (
-          alertas.length===0
-            ? <div style={{textAlign:"center",padding:60,color:"#5dca8a"}}>
-                <div style={{fontSize:44}}>✅</div>
-                <div style={{fontSize:18,fontWeight:700,marginTop:10}}>Tudo em dia!</div>
-                <div style={{color:"#6b8f72",marginTop:6,fontSize:13}}>Nenhum item com mínimo definido está abaixo do limite.</div>
-              </div>
-            : <div style={{display:"grid",gap:10}}>
-                <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:10,marginBottom:4}}>
-                  <div style={{color:"#ffaa44",fontWeight:700,fontSize:14}}>
-                    ⚠ {alertasFiltrados.length}{alertasFiltrados.length!==alertas.length?` de ${alertas.length}`:""} itens precisam de atenção
+            {/* Requisições pendentes */}
+            {reqPendentes.length>0 && (
+              <>
+                <span style={S.stit}>Requisições pendentes</span>
+                {reqPendentes.slice(0,3).map(r=>(
+                  <div key={r.id} style={{...S.card(`1px solid ${r.urgencia==='urgente'?'#E67E22':'#E8E0D0'}`),borderLeft:`3px solid ${r.urgencia==='urgente'?'#E67E22':'#4A6741'}`}}>
+                    <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:8}}>
+                      <div style={{flex:1,marginRight:8}}>
+                        <div style={{fontSize:14,fontWeight:600,color:'#2C3E2D'}}>{(r.itens && r.itens.length) ? `${r.itens.length} ${r.itens.length>1?'itens':'item'}` : r.nome}</div>
+                        <div style={{fontSize:11,color:'#6B7B6C',marginTop:2}}>{r.data} {r.hora}{r.solicitante?` · 👤 ${r.solicitante}`:""}</div>
+                      </div>
+                      {r.urgencia==='urgente' && <span style={{background:'#FFF3E0',color:'#E67E22',fontSize:10,fontWeight:700,padding:'2px 8px',borderRadius:20,whiteSpace:'nowrap'}}>🔥 URGENTE</span>}
+                    </div>
+                    {r.itens && r.itens.length > 0 && (
+                      <div style={{marginBottom:10}}>
+                        {r.itens.map((it,idx)=>(
+                          <div key={idx} style={{display:'flex',justifyContent:'space-between',fontSize:13,padding:'3px 0',borderBottom:'1px solid #F5F0E8'}}>
+                            <span style={{color:'#1E2B1F'}}>{it.nome}</span>
+                            <span style={{fontFamily:'DM Mono,monospace',fontWeight:600,color:'#2C3E2D'}}>{it.qtd}x</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {r.descricao && <div style={{fontSize:13,color:'#6B7B6C',marginBottom:10}}>{r.descricao}</div>}
+                    {r.link && <a href={r.link} target="_blank" rel="noreferrer" style={{fontSize:12,color:'#4A6741',display:'block',marginBottom:10,wordBreak:'break-all'}}>🔗 Ver produto</a>}
+                    <div style={{display:'flex',gap:8}}>
+                      <button style={{...S.btnEntrada,flex:1}} onClick={()=>atualizarStatusReq(r.id,'aprovada')}>✓ Aprovar</button>
+                      <button style={{...S.btnSaida,flex:1}} onClick={()=>atualizarStatusReq(r.id,'recusada')}>✗ Recusar</button>
+                    </div>
                   </div>
-                  <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
-                    <button style={{...s.btn(alertaCatFiltro==="todas"?"#2a4a33":"#1e2f22"),padding:"5px 12px",fontSize:12}} onClick={()=>setAlertaCatFiltro("todas")}>Todas</button>
-                    {Object.entries(CATEGORIAS).map(([key,cat]) => {
-                      const qtd = alertas.filter(i=>i.categoria===key).length;
-                      if (qtd===0) return null;
-                      return <button key={key} style={{...s.btn(alertaCatFiltro===key?"#2a4a33":"#1e2f22"),padding:"5px 12px",fontSize:12,borderLeft:`3px solid ${cat.cor}`}} onClick={()=>setAlertaCatFiltro(key)}>
-                        {cat.emoji} {cat.label} <span style={{background:"#c0392b",borderRadius:10,padding:"1px 5px",fontSize:10,marginLeft:4}}>{qtd}</span>
-                      </button>;
-                    })}
+                ))}
+                {reqPendentes.length>3 && <div style={{textAlign:'center',fontSize:12,color:'#6B7B6C',marginTop:4,cursor:'pointer'}} onClick={()=>setAba('requisicao')}>Ver todas as {reqPendentes.length} requisições →</div>}
+              </>
+            )}
+            {alertas.length>0 && (
+              <>
+                <span style={S.stit}>Itens para repor</span>
+                {alertas.slice(0,5).map(item=>(
+                  <div key={item.id} style={{...S.card('1px solid #F5C6A0'),display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+                    <div>
+                      <div style={{fontSize:14,fontWeight:600,color:'#2C3E2D'}}>{item.nome}</div>
+                      <div style={{fontSize:11,color:'#6B7B6C',marginTop:2}}>
+                        <span style={S.badge(item.categoria)}>{CATEGORIAS[item.categoria]?.emoji} {CATEGORIAS[item.categoria]?.label}</span>
+                        <span style={{marginLeft:8}}>Atual: <strong style={{color:item.qtd<=0?'#C0392B':'#E67E22'}}>{item.qtd} {item.unidade}</strong> · Mín: {item.minimo}</span>
+                      </div>
+                    </div>
+                    <button style={S.btnEntrada} onClick={()=>{setModal({tipo:'movimento',item});setForm({tipo:'entrada'});setAba('estoque');}}>↑ Entrada</button>
+                  </div>
+                ))}
+                {alertas.length>5 && <div style={{textAlign:'center',fontSize:12,color:'#6B7B6C',marginTop:4,cursor:'pointer'}} onClick={()=>setAba('alertas')}>Ver todos os {alertas.length} alertas →</div>}
+              </>
+            )}
+          </>
+        )}
+
+        {/* ESTOQUE */}
+        {aba==='estoque' && (
+          <>
+            <div style={{display:'flex',gap:8,marginBottom:16,flexWrap:'wrap'}}>
+              <input placeholder="🔍 Buscar item..." style={{...S.inp,flex:1,minWidth:140}} value={busca} onChange={e=>setBusca(e.target.value)} />
+              <select style={{...S.sel,width:'auto'}} value={catFiltro} onChange={e=>setCatFiltro(e.target.value)}>
+                <option value="todas">Todas</option>
+                {Object.entries(CATEGORIAS).map(([k,v])=><option key={k} value={k}>{v.emoji} {v.label}</option>)}
+              </select>
+            </div>
+            <button style={{...S.btnPrim,marginBottom:16}} onClick={()=>setModal({tipo:'addItem'})}>+ Novo item</button>
+            <div style={{fontSize:11,color:'#6B7B6C',marginBottom:8}}>{itensFiltrados.length} itens</div>
+            {itensFiltrados.map(item=>(
+              <div key={item.id} style={S.card()}>
+                <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:8}}>
+                  <div style={{flex:1,marginRight:8}}>
+                    <div style={{fontSize:14,fontWeight:600,color:'#2C3E2D',lineHeight:1.3}}>{item.nome}</div>
+                    <div style={{marginTop:4,display:'flex',alignItems:'center',gap:6,flexWrap:'wrap'}}>
+                      <span style={S.badge(item.categoria)}>{CATEGORIAS[item.categoria]?.emoji} {CATEGORIAS[item.categoria]?.label}</span>
+                      <span style={{...S.statusBadge(item.qtd,item.minimo)}}>{S.statusTxt(item.qtd,item.minimo)}</span>
+                    </div>
+                  </div>
+                  <div style={{textAlign:'right',flexShrink:0}}>
+                    <div style={{fontFamily:'DM Mono,monospace',fontSize:20,fontWeight:500,color:item.minimo>0&&item.qtd<=item.minimo?'#C0392B':'#2C3E2D'}}>{item.qtd}</div>
+                    <div style={{fontSize:11,color:'#6B7B6C'}}>{item.unidade}</div>
                   </div>
                 </div>
-                {alertasFiltrados.map(item => {
-                  const pct = item.minimo>0?item.qtd/item.minimo:1;
-                  const cor = item.qtd<=0?"#ff4444":pct<=0.5?"#ff8c00":"#ffe566";
-                  return (
-                    <div key={item.id} style={{...s.card(cor+"44"),display:"flex",alignItems:"center",justifyContent:"space-between",padding:"14px 18px",flexWrap:"wrap",gap:10}}>
+                {item.minimo>0 && (
+                  <div style={{marginBottom:10}}>
+                    <div style={{display:'flex',justifyContent:'space-between',fontSize:10,color:'#6B7B6C',marginBottom:3}}>
+                      <span>Estoque</span><span>Mín: {item.minimo} {item.unidade}</span>
+                    </div>
+                    <div style={{height:5,background:'#E8E0D0',borderRadius:4,overflow:'hidden'}}>
+                      <div style={{height:'100%',borderRadius:4,background:item.qtd<=0?'#C0392B':item.qtd/item.minimo<=0.5?'#E67E22':'#4A6741',width:`${Math.min(Math.max(item.qtd/item.minimo*100,0),100)}%`,transition:'width .4s'}} />
+                    </div>
+                  </div>
+                )}
+                <div style={{display:'flex',gap:8}}>
+                  <button style={{...S.btnEntrada,flex:1}} onClick={()=>{setModal({tipo:'movimento',item});setForm({tipo:'entrada'});}}>↑ Entrada</button>
+                  <button style={{...S.btnSaida,flex:1}} onClick={()=>{setModal({tipo:'movimento',item});setForm({tipo:'saida'});}}>↓ Saída</button>
+                </div>
+              </div>
+            ))}
+          </>
+        )}
+
+        {/* ALERTAS */}
+        {aba==='alertas' && (
+          alertas.length===0
+            ? <div style={{textAlign:'center',padding:60,color:'#27AE60'}}>
+                <div style={{fontSize:44}}>✅</div>
+                <div style={{fontSize:18,fontWeight:600,marginTop:10,color:'#2C3E2D'}}>Tudo em dia!</div>
+                <div style={{color:'#6B7B6C',marginTop:6,fontSize:13}}>Nenhum item abaixo do mínimo.</div>
+              </div>
+            : <>
+                <div style={{display:'flex',gap:6,flexWrap:'wrap',marginBottom:16}}>
+                  <button style={S.btnSec(alertaCat==='todas'?'#2C3E2D':undefined)} onClick={()=>setAlertaCat('todas')}
+                    {...(alertaCat==='todas'?{style:{...S.btnSec(),...{background:'#2C3E2D',color:'#FDFCF9',border:'none'}}}:{})}>
+                    Todas ({alertas.length})
+                  </button>
+                  {Object.entries(CATEGORIAS).map(([key,cat])=>{
+                    const qtd = alertas.filter(i=>i.categoria===key).length;
+                    if (qtd===0) return null;
+                    return <button key={key} style={alertaCat===key?{...S.btnSec(),...{background:'#2C3E2D',color:'#FDFCF9',border:'none'}}:S.btnSec()} onClick={()=>setAlertaCat(key)}>
+                      {cat.emoji} {cat.label} ({qtd})
+                    </button>;
+                  })}
+                </div>
+                {alertasFilt.map(item=>(
+                  <div key={item.id} style={{...S.card('1px solid #F5C6A0')}}>
+                    <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:8}}>
                       <div>
-                        <div style={{fontWeight:700,fontSize:14}}>{item.nome}</div>
-                        <div style={{color:"#6b8f72",fontSize:12,marginTop:4}}>
-                          <span style={s.badge(item.categoria)}>{CATEGORIAS[item.categoria]?.emoji} {CATEGORIAS[item.categoria]?.label}</span>
-                          <span style={{marginLeft:10}}>Atual: <strong style={{color:cor}}>{item.qtd} {item.unidade}</strong> · Mín: {item.minimo} {item.unidade}</span>
-                        </div>
-                        <div style={{marginTop:8,background:"#1e2f22",borderRadius:20,height:5,width:160}}>
-                          <div style={{background:cor,width:`${Math.min(Math.max(pct*100,0),100)}%`,height:"100%",borderRadius:20}} />
+                        <div style={{fontSize:14,fontWeight:600,color:'#2C3E2D'}}>{item.nome}</div>
+                        <div style={{marginTop:4,display:'flex',gap:6,flexWrap:'wrap',alignItems:'center'}}>
+                          <span style={S.badge(item.categoria)}>{CATEGORIAS[item.categoria]?.emoji} {CATEGORIAS[item.categoria]?.label}</span>
+                          <span style={{fontSize:11,color:'#6B7B6C'}}>Atual: <strong style={{color:item.qtd<=0?'#C0392B':'#E67E22'}}>{item.qtd} {item.unidade}</strong> · Mín: {item.minimo}</span>
                         </div>
                       </div>
-                      <button style={{...s.btn(),padding:"6px 12px",fontSize:12}} onClick={()=>{setModal({tipo:"movimento",item});setForm({tipo:"entrada"});setAba("estoque");}}>↑ Registrar entrada</button>
+                      <span style={S.statusBadge(item.qtd,item.minimo)}>{S.statusTxt(item.qtd,item.minimo)}</span>
                     </div>
-                  );
-                })}
+                    <div style={{height:5,background:'#E8E0D0',borderRadius:4,overflow:'hidden',marginBottom:10}}>
+                      <div style={{height:'100%',borderRadius:4,background:item.qtd<=0?'#C0392B':'#E67E22',width:`${Math.min(Math.max(item.qtd/item.minimo*100,0),100)}%`}} />
+                    </div>
+                    <button style={{...S.btnEntrada,width:'100%'}} onClick={()=>{setModal({tipo:'movimento',item});setForm({tipo:'entrada'});setAba('estoque');}}>↑ Registrar entrada</button>
+                  </div>
+                ))}
+              </>
+        )}
+
+        {/* HISTÓRICO */}
+        {aba==='movimentos' && (
+          movimentos.length===0
+            ? <div style={{textAlign:'center',padding:60,color:'#6B7B6C'}}>
+                <div style={{fontSize:40,marginBottom:10}}>📋</div>
+                <div style={{fontSize:14}}>Nenhuma movimentação registrada ainda</div>
               </div>
+            : movimentos.map(m=>{
+                const item = itens.find(i=>i.id===m.itemId);
+                return (
+                  <div key={m.id} style={{...S.card(),borderLeft:`3px solid ${m.tipo==='entrada'?'#27AE60':'#C0392B'}`}}>
+                    <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:6}}>
+                      <div style={{fontSize:14,fontWeight:600,color:'#2C3E2D',flex:1,marginRight:8}}>{item?.nome||'—'}</div>
+                      <span style={{background:m.tipo==='entrada'?'#E8F4E8':'#FDEDEC',color:m.tipo==='entrada'?'#27AE60':'#C0392B',padding:'2px 10px',borderRadius:20,fontSize:10,fontWeight:700,whiteSpace:'nowrap'}}>
+                        {m.tipo==='entrada'?'↑ ENTRADA':'↓ SAÍDA'}
+                      </span>
+                    </div>
+                    <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8,marginBottom:6}}>
+                      <div style={{background:'#F5F0E8',borderRadius:8,padding:'8px 10px'}}>
+                        <div style={{fontSize:10,color:'#6B7B6C'}}>Quantidade</div>
+                        <div style={{fontFamily:'DM Mono,monospace',fontSize:14,fontWeight:500}}>{m.qtd} {item?.unidade}</div>
+                      </div>
+                      <div style={{background:'#F5F0E8',borderRadius:8,padding:'8px 10px'}}>
+                        <div style={{fontSize:10,color:'#6B7B6C'}}>Data</div>
+                        <div style={{fontFamily:'DM Mono,monospace',fontSize:14,fontWeight:500}}>{m.data}</div>
+                      </div>
+                    </div>
+                    <div style={{fontSize:12,color:'#6B7B6C'}}>👤 {m.responsavel}{m.obs?` · ${m.obs}`:''}</div>
+                  </div>
+                );
+              })
         )}
       </div>
 
-      {modal?.tipo==="movimento" && (
-        <div style={s.overlay} onClick={()=>setModal(null)}>
-          <div style={s.modal} onClick={e=>e.stopPropagation()}>
-            <div style={{fontSize:17,fontWeight:800,color:"#7ecf96",marginBottom:18}}>📦 {modal.item.nome}</div>
-            <label style={s.label}>TIPO</label>
-            <div style={{display:"flex",gap:8}}>
-              {["entrada","saida"].map(t => (
-                <button key={t} style={{...s.btn(form.tipo===t?(t==="entrada"?"#2a7a45":"#7a2a2a"):"#1e2f22"),flex:1}} onClick={()=>setForm(f=>({...f,tipo:t}))}>
-                  {t==="entrada"?"↑ Entrada":"↓ Saída"}
+        {/* REQUISIÇÃO */}
+        {aba==='requisicao' && (
+          <>
+            {/* Formulário de nova requisição */}
+            <div style={S.card()}>
+              <div style={{fontSize:15,fontWeight:600,color:'#2C3E2D',marginBottom:16}}>📋 Nova requisição</div>
+              <label style={S.label}>SEU NOME *</label>
+              <input style={{...S.inp,marginBottom:16}} placeholder="Ex: João Silva" value={novaReq.solicitante} onChange={e=>setNovaReq(n=>({...n,solicitante:e.target.value}))} />
+
+              <label style={S.label}>ITENS DA REQUISIÇÃO *</label>
+              <div style={{background:'#F5F0E8',borderRadius:10,padding:12,marginBottom:12}}>
+                <div style={{display:'flex',gap:8,marginBottom:8}}>
+                  <input list="lista-itens-estoque" style={{...S.inp,flex:1}} placeholder="Buscar ou digitar item" value={itemTemp.nome} onChange={e=>setItemTemp(t=>({...t,nome:e.target.value}))} />
+                  <input type="number" min="1" style={{...S.inp,width:70,textAlign:'center'}} value={itemTemp.qtd} onChange={e=>setItemTemp(t=>({...t,qtd:e.target.value}))} />
+                  <button style={{...S.btnPrim,width:'auto',padding:'12px 16px'}} onClick={adicionarItemReq}>+</button>
+                </div>
+                <datalist id="lista-itens-estoque">
+                  {itens.map(i=><option key={i.id} value={i.nome} />)}
+                </datalist>
+                {reqItens.length === 0
+                  ? <div style={{fontSize:12,color:'#6B7B6C',textAlign:'center',padding:'8px 0'}}>Nenhum item adicionado ainda</div>
+                  : reqItens.map((it, idx)=>(
+                    <div key={idx} style={{display:'flex',justifyContent:'space-between',alignItems:'center',background:'#FDFCF9',borderRadius:8,padding:'8px 12px',marginBottom:6}}>
+                      <span style={{fontSize:13,flex:1}}>{it.nome}</span>
+                      <span style={{fontFamily:'DM Mono,monospace',fontSize:13,fontWeight:600,color:'#2C3E2D',marginRight:10}}>{it.qtd}x</span>
+                      <span onClick={()=>removerItemReq(idx)} style={{cursor:'pointer',color:'#C0392B',fontSize:16}}>✕</span>
+                    </div>
+                  ))
+                }
+              </div>
+
+              <label style={S.label}>OBSERVAÇÃO (opcional)</label>
+              <textarea style={{...S.inp,marginBottom:12,resize:'vertical',minHeight:60}} placeholder="Ex: Para a obra da Residência Silva, urgente para segunda" value={novaReq.descricao} onChange={e=>setNovaReq(n=>({...n,descricao:e.target.value}))} />
+              <label style={S.label}>🔗 LINK DO PRODUTO (opcional)</label>
+              <input style={{...S.inp,marginBottom:12}} placeholder="Cole um link de referência (Mercado Livre, Amazon, etc.)" value={novaReq.link} onChange={e=>setNovaReq(n=>({...n,link:e.target.value}))} />
+              <label style={S.label}>URGÊNCIA</label>
+              <div style={{display:'flex',gap:8,marginBottom:16}}>
+                {['normal','urgente'].map(u=>(
+                  <button key={u} style={{flex:1,padding:12,background:novaReq.urgencia===u?(u==='urgente'?'#E67E22':'#2C3E2D'):'#F5F0E8',color:novaReq.urgencia===u?'#FDFCF9':'#1E2B1F',border:'none',borderRadius:10,fontFamily:'DM Sans,sans-serif',fontSize:14,fontWeight:500,cursor:'pointer'}} onClick={()=>setNovaReq(n=>({...n,urgencia:u}))}>
+                    {u==='normal'?'Normal':'🔥 Urgente'}
+                  </button>
+                ))}
+              </div>
+              <button style={S.btnPrim} onClick={enviarRequisicao}>Enviar requisição</button>
+            </div>
+
+            {/* Histórico de requisições */}
+            {requisicoes.length>0 && (
+              <>
+                <span style={{...S.stit,marginTop:8}}>Histórico</span>
+                {requisicoes.map(r=>(
+                  <div key={r.id} style={{...S.card(),borderLeft:`3px solid ${r.status==='aprovada'?'#27AE60':r.status==='recusada'?'#C0392B':r.urgencia==='urgente'?'#E67E22':'#4A6741'}`}}>
+                    <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:8}}>
+                      <div style={{flex:1,marginRight:8}}>
+                        <div style={{fontSize:14,fontWeight:600,color:'#2C3E2D'}}>{(r.itens && r.itens.length) ? `${r.itens.length} ${r.itens.length>1?'itens':'item'}` : r.nome}</div>
+                        <div style={{fontSize:11,color:'#6B7B6C',marginTop:2}}>{r.data} {r.hora}{r.solicitante?` · 👤 ${r.solicitante}`:""}</div>
+                      </div>
+                      <span style={{
+                        fontSize:10,fontWeight:700,padding:'3px 10px',borderRadius:20,whiteSpace:'nowrap',
+                        background:r.status==='aprovada'?'#E8F4E8':r.status==='recusada'?'#FDEDEC':r.urgencia==='urgente'?'#FFF3E0':'#F5F0E8',
+                        color:r.status==='aprovada'?'#27AE60':r.status==='recusada'?'#C0392B':r.urgencia==='urgente'?'#E67E22':'#6B7B6C'
+                      }}>
+                        {r.status==='aprovada'?'✓ APROVADA':r.status==='recusada'?'✗ RECUSADA':r.urgencia==='urgente'?'🔥 URGENTE':'PENDENTE'}
+                      </span>
+                    </div>
+                    {r.itens && r.itens.length > 0 && (
+                      <div style={{marginBottom:8}}>
+                        {r.itens.map((it,idx)=>(
+                          <div key={idx} style={{display:'flex',justifyContent:'space-between',fontSize:13,padding:'4px 0',borderBottom:'1px solid #F5F0E8'}}>
+                            <span style={{color:'#1E2B1F'}}>{it.nome}</span>
+                            <span style={{fontFamily:'DM Mono,monospace',fontWeight:600,color:'#2C3E2D'}}>{it.qtd}x</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {r.descricao && <div style={{fontSize:13,color:'#6B7B6C',marginBottom:r.link?8:0}}>{r.descricao}</div>}
+                    {r.link && <a href={r.link} target="_blank" rel="noreferrer" style={{fontSize:12,color:'#4A6741',display:'block',wordBreak:'break-all'}}>🔗 Ver produto</a>}
+                    {r.status==='pendente' && (
+                      <div style={{display:'flex',gap:8,marginTop:10}}>
+                        <button style={{...S.btnEntrada,flex:1}} onClick={()=>atualizarStatusReq(r.id,'aprovada')}>✓ Aprovar</button>
+                        <button style={{...S.btnSaida,flex:1}} onClick={()=>atualizarStatusReq(r.id,'recusada')}>✗ Recusar</button>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </>
+            )}
+          </>
+        )}
+
+        {/* MODAL MOVIMENTO */}
+      {modal?.tipo==='movimento' && (
+        <div style={S.overlay} onClick={()=>setModal(null)}>
+          <div style={S.modal} onClick={e=>e.stopPropagation()}>
+            <div style={{fontSize:17,fontWeight:600,color:'#2C3E2D',marginBottom:4}}>{modal.item.nome}</div>
+            <div style={{marginBottom:18}}><span style={S.badge(modal.item.categoria)}>{CATEGORIAS[modal.item.categoria]?.emoji} {CATEGORIAS[modal.item.categoria]?.label}</span></div>
+            <label style={S.label}>TIPO</label>
+            <div style={{display:'flex',gap:8,marginBottom:16}}>
+              {['entrada','saida'].map(t=>(
+                <button key={t} style={{flex:1,padding:12,background:form.tipo===t?(t==='entrada'?'#2C3E2D':'#C0392B'):'#F5F0E8',color:form.tipo===t?'#FDFCF9':'#1E2B1F',border:'none',borderRadius:10,fontFamily:'DM Sans,sans-serif',fontSize:14,fontWeight:500,cursor:'pointer'}} onClick={()=>setForm(f=>({...f,tipo:t}))}>
+                  {t==='entrada'?'↑ Entrada':'↓ Saída'}
                 </button>
               ))}
             </div>
-            <label style={s.label}>QUANTIDADE ({modal.item.unidade}) *</label>
-            <input type="number" min="1" style={s.input} value={form.qtd||""} onChange={e=>setForm(f=>({...f,qtd:e.target.value}))} />
-            <label style={s.label}>RESPONSÁVEL *</label>
-            <input style={s.input} placeholder="Nome de quem retirou/adicionou" value={form.responsavel||""} onChange={e=>setForm(f=>({...f,responsavel:e.target.value}))} />
-            <label style={s.label}>OBSERVAÇÃO</label>
-            <input style={s.input} placeholder="Ex: Projeto Residencial Jardins" value={form.obs||""} onChange={e=>setForm(f=>({...f,obs:e.target.value}))} />
-            <div style={{display:"flex",gap:10,marginTop:18}}>
-              <button style={{...s.btn("#333"),flex:1}} onClick={()=>setModal(null)}>Cancelar</button>
-              <button style={{...s.btn(),flex:2}} onClick={registrarMovimento}>Confirmar</button>
+            <label style={S.label}>QUANTIDADE ({modal.item.unidade}) *</label>
+            <input type="number" min="1" style={{...S.inp,marginBottom:12}} value={form.qtd||''} onChange={e=>setForm(f=>({...f,qtd:e.target.value}))} />
+            <label style={S.label}>RESPONSÁVEL *</label>
+            <input style={{...S.inp,marginBottom:12}} placeholder="Nome de quem retirou/adicionou" value={form.responsavel||''} onChange={e=>setForm(f=>({...f,responsavel:e.target.value}))} />
+            <label style={S.label}>OBSERVAÇÃO</label>
+            <input style={{...S.inp,marginBottom:20}} placeholder="Ex: Projeto Residencial Jardins" value={form.obs||''} onChange={e=>setForm(f=>({...f,obs:e.target.value}))} />
+            <div style={{display:'flex',gap:10}}>
+              <button style={{...S.btnSec(),flex:1,padding:14}} onClick={()=>setModal(null)}>Cancelar</button>
+              <button style={{...S.btnPrim,flex:2}} onClick={registrarMovimento}>Confirmar</button>
             </div>
-            <div style={{marginTop:12,color:"#5a7a62",fontSize:11,textAlign:"center"}}>📧 Alerta automático disparado se cair abaixo do mínimo</div>
           </div>
         </div>
       )}
 
-      {modal?.tipo==="addItem" && (
-        <div style={s.overlay} onClick={()=>setModal(null)}>
-          <div style={s.modal} onClick={e=>e.stopPropagation()}>
-            <div style={{fontSize:17,fontWeight:800,color:"#7ecf96",marginBottom:18}}>➕ Novo Item</div>
-            <label style={s.label}>NOME *</label>
-            <input style={s.input} value={novoItem.nome} onChange={e=>setNovoItem(n=>({...n,nome:e.target.value}))} />
-            <label style={s.label}>CATEGORIA</label>
-            <select style={{...s.select,width:"100%"}} value={novoItem.categoria} onChange={e=>setNovoItem(n=>({...n,categoria:e.target.value}))}>
-              {Object.entries(CATEGORIAS).map(([k,v]) => <option key={k} value={k}>{v.emoji} {v.label}</option>)}
+      {/* MODAL NOVO ITEM */}
+      {modal?.tipo==='addItem' && (
+        <div style={S.overlay} onClick={()=>setModal(null)}>
+          <div style={S.modal} onClick={e=>e.stopPropagation()}>
+            <div style={{fontSize:17,fontWeight:600,color:'#2C3E2D',marginBottom:18}}>Novo item</div>
+            <label style={S.label}>NOME *</label>
+            <input style={{...S.inp,marginBottom:12}} value={novoItem.nome} onChange={e=>setNovoItem(n=>({...n,nome:e.target.value}))} />
+            <label style={S.label}>CATEGORIA</label>
+            <select style={{...S.sel,marginBottom:12}} value={novoItem.categoria} onChange={e=>setNovoItem(n=>({...n,categoria:e.target.value}))}>
+              {Object.entries(CATEGORIAS).map(([k,v])=><option key={k} value={k}>{v.emoji} {v.label}</option>)}
             </select>
-            <label style={s.label}>UNIDADE</label>
-            <select style={{...s.select,width:"100%"}} value={novoItem.unidade} onChange={e=>setNovoItem(n=>({...n,unidade:e.target.value}))}>
-              {["UN","KG","L","M","M2","M3","SC","BAG","PC","par","cx","RL"].map(u=><option key={u} value={u}>{u}</option>)}
+            <label style={S.label}>UNIDADE</label>
+            <select style={{...S.sel,marginBottom:12}} value={novoItem.unidade} onChange={e=>setNovoItem(n=>({...n,unidade:e.target.value}))}>
+              {['UN','KG','L','M','M2','M3','SC','BAG','PC','par','cx','RL'].map(u=><option key={u} value={u}>{u}</option>)}
             </select>
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10}}>
-              <div><label style={s.label}>QTD INICIAL</label><input type="number" style={s.input} value={novoItem.qtd} onChange={e=>setNovoItem(n=>({...n,qtd:e.target.value}))} /></div>
-              <div><label style={s.label}>MÍNIMO</label><input type="number" style={s.input} value={novoItem.minimo} onChange={e=>setNovoItem(n=>({...n,minimo:e.target.value}))} /></div>
-              <div><label style={s.label}>PREÇO UNIT.</label><input type="number" step="0.01" style={s.input} value={novoItem.preco} onChange={e=>setNovoItem(n=>({...n,preco:e.target.value}))} /></div>
+            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:10,marginBottom:20}}>
+              <div><label style={S.label}>QTD INICIAL</label><input type="number" style={S.inp} value={novoItem.qtd} onChange={e=>setNovoItem(n=>({...n,qtd:e.target.value}))} /></div>
+              <div><label style={S.label}>MÍNIMO</label><input type="number" style={S.inp} value={novoItem.minimo} onChange={e=>setNovoItem(n=>({...n,minimo:e.target.value}))} /></div>
+              <div><label style={S.label}>PREÇO</label><input type="number" step="0.01" style={S.inp} value={novoItem.preco} onChange={e=>setNovoItem(n=>({...n,preco:e.target.value}))} /></div>
             </div>
-            <div style={{display:"flex",gap:10,marginTop:18}}>
-              <button style={{...s.btn("#333"),flex:1}} onClick={()=>setModal(null)}>Cancelar</button>
-              <button style={{...s.btn(),flex:2}} onClick={adicionarItem}>Adicionar</button>
+            <div style={{display:'flex',gap:10}}>
+              <button style={{...S.btnSec(),flex:1,padding:14}} onClick={()=>setModal(null)}>Cancelar</button>
+              <button style={{...S.btnPrim,flex:2}} onClick={adicionarItem}>Adicionar</button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* TOAST */}
+      {toast && (
+        <div style={{position:'fixed',bottom:90,left:'50%',transform:'translateX(-50%)',background:'#2C3E2D',color:'#FDFCF9',padding:'12px 20px',borderRadius:30,fontSize:13,fontWeight:500,zIndex:300,whiteSpace:'nowrap'}}>
+          {toast}
         </div>
       )}
     </div>
   );
 }
 
-ReactDOM.createRoot(document.getElementById("root")).render(React.createElement(App));
+ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(App));
 </script>
 </body>
 </html>
