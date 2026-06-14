@@ -43,7 +43,7 @@ const db = firebase.firestore();
 // ===== EMAILJS =====
 const EMAILJS_SERVICE = 'service_rnrk6d9';
 const EMAILJS_TEMPLATE = 'template_1c6v8jd';
-const EMAILJS_TEMPLATE_LISTA = 'template_g1by1jf';
+const EMAILJS_TEMPLATE_GENERICO = 'template_g1by1jf';
 const EMAILJS_PUBLIC_KEY = 'nLg7kv7u1nqJ6yaVZ';
 emailjs.init(EMAILJS_PUBLIC_KEY);
 
@@ -208,6 +208,23 @@ function App() {
       status: 'pendente'
     };
     fbSalvarRequisicao(req);
+
+    // Disparar e-mail de nova requisição
+    const listaTexto = reqItens.map(it => `  • ${it.nome} — ${it.qtd}x`).join('\n');
+    const urgTag = req.urgencia === 'urgente' ? ' 🔥 URGENTE' : '';
+    const corpoReq =
+      `Solicitante: ${req.solicitante}\n` +
+      `Urgência: ${req.urgencia === 'urgente' ? '🔥 URGENTE' : 'Normal'}\n` +
+      `Data: ${req.data} ${req.hora}\n\n` +
+      `ITENS:\n${listaTexto}\n\n` +
+      `Observação: ${req.descricao || '(nenhuma)'}\n` +
+      `Link: ${req.link || '(nenhum)'}`;
+    emailjs.send(EMAILJS_SERVICE, EMAILJS_TEMPLATE_GENERICO, {
+      assunto: `📋 Nova Requisição — ${req.solicitante}${urgTag}`,
+      titulo: 'Nova requisição de compra recebida!',
+      corpo: corpoReq
+    }).catch(e => console.warn('EmailJS req:', e));
+
     setNovaReq({solicitante:'',descricao:'',link:'',urgencia:'normal'});
     setReqItens([]);
     setItemTemp({nome:'',qtd:1});
@@ -274,9 +291,10 @@ function App() {
         texto += `  • ${i.nome} — atual: ${i.qtd} ${i.unidade} / mín: ${i.minimo} [${status}]\n`;
       });
     });
-    emailjs.send(EMAILJS_SERVICE, EMAILJS_TEMPLATE_LISTA, {
-      lista_itens: texto,
-      total_itens: alertas.length
+    emailjs.send(EMAILJS_SERVICE, EMAILJS_TEMPLATE_GENERICO, {
+      assunto: `📋 Lista de Reposição — INDOOR (${alertas.length} itens)`,
+      titulo: 'Itens que precisam de reposição:',
+      corpo: texto + `\nTotal: ${alertas.length} itens`
     }).then(() => {
       showToast('Lista enviada por e-mail ✓');
     }).catch(e => {
