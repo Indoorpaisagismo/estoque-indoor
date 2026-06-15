@@ -843,12 +843,21 @@ function renderDash() {
   document.getElementById('d-atrasados').textContent = atrasados.length;
   document.getElementById('d-concluidos').textContent = concluidos.length;
 
-  // Equipe hoje — pega meta do dia se houver
-  const metaHoje = metas.filter(m => m.data === hoje()).slice(-1)[0];
-  if (metaHoje) {
-    const proj = projetos.find(p => p.id === metaHoje.projetoId);
-    document.getElementById('d-eq-local').textContent = proj ? proj.nome : 'Projeto não encontrado';
-    document.getElementById('d-eq-det').textContent = (metaHoje.equipe || []).join(', ') || '—';
+  // Equipe hoje — todas as metas do dia
+  const metasHoje = metas.filter(m => m.data === hoje());
+  if (metasHoje.length > 0) {
+    if (metasHoje.length === 1) {
+      const proj = projetos.find(p => p.id === metasHoje[0].projetoId);
+      document.getElementById('d-eq-local').textContent = proj ? proj.nome : 'Projeto não encontrado';
+      document.getElementById('d-eq-det').textContent = (metasHoje[0].equipe || []).join(', ') || '—';
+    } else {
+      document.getElementById('d-eq-local').textContent = `${metasHoje.length} frentes de trabalho hoje`;
+      const resumo = metasHoje.map(m => {
+        const proj = projetos.find(p => p.id === m.projetoId);
+        return proj ? proj.nome : '—';
+      }).join(' · ');
+      document.getElementById('d-eq-det').textContent = resumo;
+    }
   } else if (ativos.length > 0) {
     document.getElementById('d-eq-local').textContent = ativos[0].nome;
     document.getElementById('d-eq-det').textContent = ativos[0].endereco || '—';
@@ -893,21 +902,23 @@ function renderDash() {
     }).join('');
   }
 
-  // Meta do dia
+  // Meta do dia — todas as metas de hoje
   const md = document.getElementById('d-meta-hoje');
-  if (!metaHoje) {
+  if (metasHoje.length === 0) {
     md.innerHTML = '<div style="font-size:13px;color:var(--txts);background:var(--branco);border-radius:12px;padding:14px;border:1px solid var(--bge)">Nenhuma meta publicada hoje. Vá em "Meta do Dia" para planejar.</div>';
   } else {
-    const proj = projetos.find(p => p.id === metaHoje.projetoId);
-    md.innerHTML = `
-    <div class="md-card">
-      <div class="md-header">
-        <div><div class="md-projeto">${proj ? proj.nome : '—'}</div><div class="md-equipe">👥 ${(metaHoje.equipe||[]).join(', ')}</div></div>
-        <span class="ptag exec">${metaHoje.tarefas ? metaHoje.tarefas.length : 0} tarefas</span>
-      </div>
-      ${(metaHoje.tarefas||[]).map(t=>`<div class="md-tarefa">${t}</div>`).join('')}
-      ${metaHoje.obs ? `<div class="md-obs">📝 ${metaHoje.obs}</div>` : ''}
-    </div>`;
+    md.innerHTML = metasHoje.map(meta => {
+      const proj = projetos.find(p => p.id === meta.projetoId);
+      return `
+      <div class="md-card">
+        <div class="md-header">
+          <div><div class="md-projeto">${proj ? proj.nome : '—'}</div><div class="md-equipe">👥 ${(meta.equipe||[]).join(', ')}</div></div>
+          <span class="ptag exec">${meta.tarefas ? meta.tarefas.length : 0} tarefas</span>
+        </div>
+        ${(meta.tarefas||[]).map(t=>`<div class="md-tarefa">${t}</div>`).join('')}
+        ${meta.obs ? `<div class="md-obs">📝 ${meta.obs}</div>` : ''}
+      </div>`;
+    }).join('');
   }
 
   // Registros de campo de hoje
