@@ -1326,14 +1326,18 @@ function renderSemana() {
   const grid = document.getElementById('semana-grid');
   if (!grid) return;
   const hojeStr = hoje();
+
+  // Começar 7 dias corridos atrás
   const inicio = new Date();
+  inicio.setDate(inicio.getDate() - 7);
 
   let html = '';
-  let diasMostrados = 0;
+  let diasUteisFuturos = 0;
   let offset = 0;
+  let separadorPassadoMostrado = false;
 
-  // Mostrar 15 dias úteis (seg-sáb) a partir de hoje
-  while (diasMostrados < 15) {
+  // Percorre dias: 7 passados + 15 dias úteis a partir de hoje
+  while (diasUteisFuturos < 15) {
     const d = new Date(inicio);
     d.setDate(inicio.getDate() + offset);
     offset++;
@@ -1342,11 +1346,18 @@ function renderSemana() {
 
     const ds = d.toISOString().split('T')[0];
     const isHj = ds === hojeStr;
+    const isPassado = ds < hojeStr;
 
-    // Itens do cronograma manual neste dia
+    // Conta dias úteis só a partir de hoje (para limitar os 15 futuros)
+    if (!isPassado) diasUteisFuturos++;
+
+    // Separador visual entre passado e presente
+    if (!isPassado && !separadorPassadoMostrado && !isHj) {
+      // (caso hoje seja domingo e o primeiro dia útil seja segunda)
+    }
+
+    // Itens do cronograma neste dia
     const itensCron = cronograma.filter(c => c.data === ds);
-    // Metas/registros automáticos
-    const metaDia = metas.filter(m => m.data === ds).slice(-1)[0];
     const regsDia = registros.filter(r => r.data === ds);
 
     let items = '';
@@ -1366,15 +1377,18 @@ function renderSemana() {
     });
     if (!items) items = '<div style="font-size:12px;color:var(--bge);padding:4px 0">—</div>';
 
+    // Estilo do card: passado fica mais apagado
+    const estiloCard = isPassado ? 'margin-bottom:10px;opacity:0.65' : 'margin-bottom:10px';
+    const tagPassado = isPassado ? '<span style="font-size:9px;color:var(--txts);background:var(--bge);padding:1px 6px;border-radius:10px;margin-left:6px">PASSOU</span>' : '';
+
     html += `
-    <div class="diacard ${isHj?'hoje':''}" style="margin-bottom:10px">
+    <div class="diacard ${isHj?'hoje':''}" style="${estiloCard}">
       <div class="diah">
-        <span class="dianome">${dias[dow]} ${d.getDate().toString().padStart(2,'0')}/${(d.getMonth()+1).toString().padStart(2,'0')}${isHj?' · hoje':''}</span>
+        <span class="dianome">${dias[dow]} ${d.getDate().toString().padStart(2,'0')}/${(d.getMonth()+1).toString().padStart(2,'0')}${isHj?' · hoje':''}${tagPassado}</span>
         <button class="btn-gestor" onclick="abrirAddCronograma('${ds}')" style="font-size:18px;color:var(--vm)">＋</button>
       </div>
       ${items}
     </div>`;
-    diasMostrados++;
   }
   grid.innerHTML = html;
 
