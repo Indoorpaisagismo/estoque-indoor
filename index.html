@@ -3,32 +3,598 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>INDOOR · Estoque</title>
-<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+<title>INDOOR · Hub de Execução</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap');
   :root {
-    --vd:#2C3E2D;--vm:#4A6741;--vc:#7A9E76;
-    --bg:#F5F0E8;--bge:#E8E0D0;--terra:#A67C52;--terrac:#C49A6C;
-    --branco:#FDFCF9;--txt:#1E2B1F;--txts:#6B7B6C;
-    --erro:#C0392B;--ok:#27AE60;--alerta:#E67E22;
+    --vd: #2C3E2D; --vm: #4A6741; --vc: #7A9E76;
+    --bg: #F5F0E8; --bge: #E8E0D0; --terra: #A67C52; --terrac: #C49A6C;
+    --branco: #FDFCF9; --txt: #1E2B1F; --txts: #6B7B6C;
+    --erro: #C0392B; --ok: #27AE60; --alerta: #E67E22;
   }
   *{box-sizing:border-box;margin:0;padding:0;}
   body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--txt);min-height:100vh;padding-bottom:80px;}
-  input,select,button,textarea{font-family:inherit;}
+
+  /* HEADER */
+  .hdr{background:var(--vd);padding:16px 20px 0;position:sticky;top:0;z-index:100;}
+  .hdr-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;}
+  .logo{font-size:13px;font-weight:600;letter-spacing:2px;color:var(--terrac);text-transform:uppercase;}
+  .data-txt{font-family:'DM Mono',monospace;font-size:11px;color:var(--vc);}
+  .hdr-sub{font-size:18px;font-weight:300;color:var(--branco);letter-spacing:-0.3px;margin-bottom:10px;}
+  .nav{display:flex;border-top:1px solid rgba(255,255,255,0.08);overflow-x:auto;}
+  .nb{flex:1;min-width:60px;padding:10px 4px;background:none;border:none;color:var(--vc);font-family:'DM Sans',sans-serif;font-size:11px;font-weight:500;cursor:pointer;border-bottom:2px solid transparent;transition:all .2s;white-space:nowrap;}
+  .nb.ativo{color:var(--terrac);border-bottom-color:var(--terrac);}
+
+  /* ABAS */
+  .aba{display:none;padding:20px;}
+  .aba.ativo{display:block;}
+
+  /* TÍTULOS */
+  .stit{font-size:11px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--txts);margin-bottom:12px;}
+
+  /* GRID RESUMO */
+  .rgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:20px;}
+  .rcard{background:var(--branco);border-radius:12px;padding:14px 10px;border-left:3px solid var(--vc);text-align:center;}
+  .rcard.al{border-left-color:var(--alerta);}
+  .rcard.ok{border-left-color:var(--ok);}
+  .rnum{font-family:'DM Mono',monospace;font-size:22px;font-weight:500;color:var(--vd);line-height:1;}
+  .rlbl{font-size:10px;color:var(--txts);margin-top:3px;line-height:1.2;}
+
+  /* CARD EQUIPE */
+  .eqcard{background:var(--vd);border-radius:14px;padding:16px;margin-bottom:20px;color:var(--branco);}
+  .eqlbl{font-size:11px;color:var(--vc);letter-spacing:1px;margin-bottom:4px;}
+  .eqval{font-size:16px;font-weight:600;}
+  .eqdet{font-size:12px;color:var(--vc);margin-top:2px;}
+
+  /* PROGRESSO */
+  .ptrilha{height:8px;background:var(--bge);border-radius:4px;overflow:hidden;}
+  .pbarra{height:100%;border-radius:4px;background:linear-gradient(90deg,var(--vm),var(--vc));position:relative;transition:width .6s;}
+  .pbarra::after{content:'🌿';position:absolute;right:-4px;top:-6px;font-size:14px;}
+  .pbarra.atrasado{background:linear-gradient(90deg,var(--alerta),#F39C12);}
+  .pbarra.completo{background:linear-gradient(90deg,var(--ok),#52BE80);}
+
+  /* PROJETOS CARDS */
+  .pcard{background:var(--branco);border-radius:14px;padding:16px;margin-bottom:12px;border:1px solid var(--bge);}
+  .pch{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;}
+  .pnome{font-size:15px;font-weight:600;color:var(--vd);}
+  .ptag{font-size:10px;font-weight:500;padding:3px 8px;border-radius:20px;background:var(--bge);color:var(--txts);}
+  .ptag.exec{background:#FFF3E0;color:var(--terra);}
+  .ptag.man{background:#E8F4E8;color:var(--vm);}
+  .ptag.irrigacao{background:#E3F2FD;color:#1565C0;}
+  .ptag.lago{background:#E8EAF6;color:#3949AB;}
+  .plbl{display:flex;justify-content:space-between;font-size:11px;color:var(--txts);margin-bottom:5px;}
+  .pmeta{font-size:12px;color:var(--txts);margin-top:6px;}
+
+  /* CUSTOS */
+  .custo-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px;}
+  .custo-item{background:var(--bg);border-radius:8px;padding:10px 12px;}
+  .custo-lbl{font-size:10px;color:var(--txts);margin-bottom:2px;}
+  .custo-val{font-family:'DM Mono',monospace;font-size:14px;font-weight:500;color:var(--vd);}
+  .custo-item.destaque{background:var(--vd);color:var(--branco);}
+  .custo-item.destaque .custo-lbl{color:var(--vc);}
+  .custo-item.destaque .custo-val{color:var(--branco);}
+  .custo-item.alerta{background:#FFF3E0;}
+  .custo-item.alerta .custo-val{color:var(--alerta);}
+
+  /* ACOES */
+  .acoes{display:flex;gap:8px;margin-top:12px;padding-top:12px;border-top:1px solid var(--bg);}
+  .btn-acao{flex:1;padding:8px;border-radius:8px;border:1px solid var(--bge);background:var(--bg);font-family:'DM Sans',sans-serif;font-size:12px;font-weight:500;cursor:pointer;color:var(--txt);}
+  .btn-acao.p{background:var(--vd);color:var(--branco);border-color:var(--vd);}
+
+  /* META DIÁRIA */
+  .meta-card{background:var(--branco);border-radius:14px;padding:16px;margin-bottom:12px;border:1px solid var(--bge);}
+  .meta-item{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--bg);}
+  .meta-item:last-child{border-bottom:none;}
+  .mstatus{width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;flex-shrink:0;}
+  .mstatus.ok{background:#E8F4E8;color:var(--ok);}
+  .mstatus.pend{background:var(--bge);color:var(--txts);}
+  .mstatus.prob{background:#FDEDEC;color:var(--erro);}
+  .mtxt{font-size:13px;flex:1;}
+  .mproj{font-size:10px;color:var(--txts);}
+
+  /* FORMS */
+  .campo-grupo{margin-bottom:16px;}
+  .campo-lbl{font-size:12px;font-weight:500;color:var(--txts);margin-bottom:6px;display:block;}
+  .campo-inp,.campo-sel,.campo-ta{width:100%;padding:12px 14px;border:1.5px solid var(--bge);border-radius:10px;font-family:'DM Sans',sans-serif;font-size:14px;color:var(--txt);background:var(--branco);outline:none;transition:border-color .2s;}
+  .campo-inp:focus,.campo-sel:focus,.campo-ta:focus{border-color:var(--vm);}
+  .campo-ta{resize:vertical;min-height:70px;}
+  .campo-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+
+  /* BOTÕES */
+  .btn-novo{width:100%;padding:14px;background:var(--vd);color:var(--branco);border:none;border-radius:12px;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:500;cursor:pointer;margin-bottom:20px;}
+  .btn-salvar{width:100%;padding:16px;background:var(--vd);color:var(--branco);border:none;border-radius:12px;font-family:'DM Sans',sans-serif;font-size:15px;font-weight:600;cursor:pointer;margin-top:8px;}
+  .btn-campo{width:100%;padding:16px;background:var(--terra);color:var(--branco);border:none;border-radius:12px;font-family:'DM Sans',sans-serif;font-size:15px;font-weight:600;cursor:pointer;margin-top:16px;}
+  .btn-meta{width:100%;padding:16px;background:var(--vm);color:var(--branco);border:none;border-radius:12px;font-family:'DM Sans',sans-serif;font-size:15px;font-weight:600;cursor:pointer;margin-top:8px;}
+
+  /* MODAL */
+  .modal-ov{display:none;position:fixed;inset:0;background:rgba(30,43,31,.7);z-index:200;align-items:flex-end;}
+  .modal-ov.aberto{display:flex;}
+  .modal{background:var(--branco);border-radius:20px 20px 0 0;width:100%;max-height:92vh;overflow-y:auto;padding:24px 20px;animation:slideUp .25s ease;}
+  @keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+  .modal-tit{font-size:18px;font-weight:600;color:var(--vd);margin-bottom:20px;}
+  .mfechar{float:right;background:var(--bge);border:none;border-radius:50%;width:28px;height:28px;font-size:16px;cursor:pointer;color:var(--txts);}
+
+  /* EQUIPE CHECKBOXES */
+  .equipe-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:6px;}
+  .eq-item{display:flex;align-items:center;justify-content:space-between;gap:8px;background:var(--bg);border-radius:8px;padding:10px 12px;cursor:default;}
+  .eq-item input[type="number"]{flex-shrink:0;}
+  .eq-item input[type="checkbox"]{width:18px;height:18px;accent-color:var(--vm);cursor:pointer;flex-shrink:0;}
+  .eq-nome{font-size:13px;}
+  .eq-diaria{font-size:11px;color:var(--txts);}
+
+  /* TAREFAS */
+  .tarefa-item{display:flex;align-items:center;gap:10px;background:var(--branco);border-radius:12px;padding:14px;margin-bottom:8px;border:1px solid var(--bge);}
+  .tchk{width:22px;height:22px;border-radius:6px;border:2px solid var(--bge);appearance:none;-webkit-appearance:none;cursor:pointer;background:var(--branco);flex-shrink:0;transition:all .2s;}
+  .tchk:checked{background:var(--vm);border-color:var(--vm);background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 10 8' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 4l3 3 5-6' stroke='white' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:center;background-size:12px;}
+  .ttxt{font-size:14px;flex:1;}
+
+  /* SEMANA */
+  .diacard{background:var(--branco);border-radius:12px;padding:14px;margin-bottom:10px;border:1px solid var(--bge);}
+  .diacard.hoje{border-left:3px solid var(--terra);}
+  .diah{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;}
+  .dianome{font-size:13px;font-weight:600;color:var(--vd);}
+  .diacard.hoje .dianome{color:var(--terra);}
+  .diadta{font-family:'DM Mono',monospace;font-size:11px;color:var(--txts);}
+  .diatarefa{font-size:12px;color:var(--txts);padding:4px 0;border-bottom:1px solid var(--bg);display:flex;align-items:center;gap:5px;}
+  .diatarefa:last-child{border-bottom:none;}
+  .cron-item{font-size:12px;color:var(--txt);padding:7px 10px;margin:5px 0;background:var(--bg);border-radius:8px;cursor:pointer;line-height:1.3;}
+  .cron-item:hover{background:var(--bge);}
+  .diatarefa::before{content:'·';color:var(--vc);font-size:18px;line-height:1;}
+
+  /* INFO CAMPO */
+  .campo-info{background:var(--vd);border-radius:14px;padding:16px;margin-bottom:20px;color:var(--branco);}
+  .ci-lbl{font-size:11px;color:var(--vc);letter-spacing:1px;margin-bottom:4px;}
+  .ci-val{font-size:16px;font-weight:600;}
+
+  /* CUSTO PREVIEW */
+  .custo-preview{background:linear-gradient(135deg,var(--vd),var(--vm));border-radius:14px;padding:16px;margin:16px 0;color:var(--branco);}
+  .cp-tit{font-size:11px;color:var(--vc);letter-spacing:1px;margin-bottom:12px;}
+  .cp-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+  .cp-item{background:rgba(255,255,255,0.1);border-radius:8px;padding:8px 10px;}
+  .cp-lbl{font-size:10px;color:rgba(255,255,255,.7);margin-bottom:2px;}
+  .cp-val{font-family:'DM Mono',monospace;font-size:14px;font-weight:500;}
+  .cp-total{grid-column:1/-1;background:rgba(255,255,255,.2);border-radius:8px;padding:10px 12px;display:flex;justify-content:space-between;align-items:center;}
+  .cp-total-lbl{font-size:12px;font-weight:600;}
+  .cp-total-val{font-family:'DM Mono',monospace;font-size:18px;font-weight:600;}
+
+  /* OCORRENCIA */
+  .oc-form{background:#FDEDEC;border-radius:14px;padding:16px;margin-top:16px;border:1px solid #F5B7B1;}
+  .oc-tit{font-size:13px;font-weight:600;color:var(--erro);margin-bottom:10px;}
+
+  /* TOAST */
+  .toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--vd);color:var(--branco);padding:12px 20px;border-radius:30px;font-size:13px;font-weight:500;opacity:0;transition:all .3s;z-index:300;white-space:nowrap;}
+  .toast.v{opacity:1;transform:translateX(-50%) translateY(0);}
+
+  /* VAZIO */
+  .vazio{text-align:center;padding:40px 20px;color:var(--txts);}
+  .vi{font-size:40px;margin-bottom:10px;}
+
+  /* BOTÕES GESTOR */
+  .btn-gestor{background:none;border:none;cursor:pointer;font-size:14px;padding:4px 6px;border-radius:6px;color:var(--txts);transition:background .2s;}
+  .btn-gestor:hover{background:var(--bge);}
+  .btn-gestor.del:hover{background:#FDEDEC;color:var(--erro);}
+  .acoes-gestor{display:flex;gap:4px;margin-top:10px;padding-top:10px;border-top:1px solid var(--bg);}
+
+  .sec-toggle{width:100%;display:flex;justify-content:space-between;align-items:center;background:none;border:none;padding:0;cursor:pointer;margin-bottom:8px;}
+  .sec-arrow{font-size:12px;color:var(--txts);transition:transform .2s;}
+  .sec-arrow.open{transform:rotate(180deg);}
+  .sec-body{display:none;}
+  .sec-body.open{display:block;}
+
+  /* BADGE */
+  .badge{display:inline-block;font-size:10px;font-weight:600;padding:2px 7px;border-radius:10px;margin-left:6px;}
+  .badge.verde{background:#E8F4E8;color:var(--vm);}
+  .badge.alerta{background:#FFF3E0;color:var(--alerta);}
+  .badge.erro{background:#FDEDEC;color:var(--erro);}
+
+  /* META DIÁRIA PAINEL */
+  .md-card{background:var(--branco);border-radius:14px;padding:16px;margin-bottom:12px;border:1px solid var(--bge);}
+  .md-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;}
+  .md-projeto{font-size:15px;font-weight:600;color:var(--vd);}
+  .md-equipe{font-size:12px;color:var(--txts);margin-top:2px;}
+  .md-tarefa{font-size:13px;color:var(--txt);padding:6px 0;border-bottom:1px solid var(--bg);display:flex;align-items:center;gap:8px;}
+  .md-tarefa:last-child{border-bottom:none;}
+  .md-tarefa::before{content:'→';color:var(--vc);font-size:12px;}
+  .md-obs{font-size:12px;color:var(--txts);background:var(--bg);border-radius:8px;padding:10px;margin-top:8px;}
 </style>
 </head>
 <body>
-<div id="root"></div>
-<script type="text/babel">
-const { useState, useMemo, useEffect } = React;
 
-// ===== FIREBASE =====
+<div class="hdr">
+  <div class="hdr-top">
+    <span class="logo">INDOOR</span>
+    <span class="data-txt" id="dataAtual"></span>
+  </div>
+  <div class="hdr-sub">Hub de Execução</div>
+  <div class="nav">
+    <button class="nb ativo" onclick="mudarAba('dashboard',this)">Dashboard</button>
+    <button class="nb" onclick="mudarAba('projetos',this)">Projetos</button>
+    <button class="nb" onclick="mudarAba('meta',this)">Meta do Dia</button>
+    <button class="nb" onclick="mudarAba('campo',this)">Campo</button>
+    <button class="nb" onclick="mudarAba('semana',this)">Cronograma</button>
+  </div>
+</div>
+
+<!-- ===== DASHBOARD ===== -->
+<div class="aba ativo" id="aba-dashboard">
+  <div class="rgrid">
+    <div class="rcard"><div class="rnum" id="d-total">0</div><div class="rlbl">Projetos ativos</div></div>
+    <div class="rcard al"><div class="rnum" id="d-atrasados">0</div><div class="rlbl">Em atraso</div></div>
+    <div class="rcard ok"><div class="rnum" id="d-concluidos">0</div><div class="rlbl">Concluídos</div></div>
+  </div>
+
+  <div class="eqcard">
+    <div class="eqlbl">EQUIPE HOJE</div>
+    <div class="eqval" id="d-eq-local">—</div>
+    <div class="eqdet" id="d-eq-det">—</div>
+  </div>
+
+  <!-- ALERTA DE PENDÊNCIAS -->
+  <div id="d-pendencias"></div>
+
+  <div class="stit">Projetos em andamento</div>
+  <div id="d-projetos"></div>
+
+  <div class="stit" style="margin-top:20px">Meta do dia</div>
+  <div id="d-meta-hoje"></div>
+
+  <div class="stit" style="margin-top:20px">Registros de campo hoje</div>
+  <div id="d-registros-hoje"></div>
+</div>
+
+<!-- ===== PROJETOS ===== -->
+<div class="aba" id="aba-projetos">
+  <button class="btn-novo" onclick="abrirModal('m-projeto')">+ Novo projeto</button>
+  <div class="stit">Todos os projetos</div>
+  <div id="p-lista"></div>
+</div>
+
+<!-- ===== META DO DIA ===== -->
+<div class="aba" id="aba-meta">
+  <div class="stit">Planejar meta do dia</div>
+
+  <div class="campo-grupo">
+    <label class="campo-lbl">Data</label>
+    <input class="campo-inp" type="date" id="meta-data">
+  </div>
+
+  <div class="campo-grupo">
+    <label class="campo-lbl">Projeto</label>
+    <div style="display:flex;gap:8px">
+      <select class="campo-sel" id="meta-projeto" style="flex:1">
+        <option value="">— Selecionar projeto —</option>
+      </select>
+      <button class="btn-acao p" style="flex-shrink:0;padding:12px 16px;border-radius:10px" onclick="confirmarProjetoMeta()">OK</button>
+    </div>
+    <div id="meta-projeto-confirmado" style="display:none;margin-top:8px;font-size:13px;color:var(--vm);font-weight:500"></div>
+  </div>
+
+  <div class="campo-grupo">
+    <label class="campo-lbl">Equipe — quantidade por função</label>
+    <div class="equipe-grid" id="meta-equipe-grid">
+      <div class="eq-item"><div><div class="eq-nome">Gerente</div><div class="eq-diaria">R$ 255,34/dia</div></div><input type="number" min="0" max="10" value="0" data-funcao="Gerente" data-diaria="255.34" class="eq-qtd campo-inp" style="width:60px;padding:6px;text-align:center"></div>
+      <div class="eq-item"><div><div class="eq-nome">Encarregado</div><div class="eq-diaria">R$ 220,68/dia</div></div><input type="number" min="0" max="10" value="0" data-funcao="Encarregado" data-diaria="220.68" class="eq-qtd campo-inp" style="width:60px;padding:6px;text-align:center"></div>
+      <div class="eq-item"><div><div class="eq-nome">Jardineiro</div><div class="eq-diaria">R$ 172,11/dia</div></div><input type="number" min="0" max="10" value="0" data-funcao="Jardineiro" data-diaria="172.11" class="eq-qtd campo-inp" style="width:60px;padding:6px;text-align:center"></div>
+      <div class="eq-item"><div><div class="eq-nome">Diarista</div><div class="eq-diaria">R$ 110,00/dia</div></div><input type="number" min="0" max="10" value="0" data-funcao="Diarista" data-diaria="110" class="eq-qtd campo-inp" style="width:60px;padding:6px;text-align:center"></div>
+    </div>
+  </div>
+
+  <div class="campo-grupo">
+    <label class="campo-lbl">Metas do dia (uma por linha)</label>
+    <textarea class="campo-ta" id="meta-tarefas" placeholder="Ex:&#10;Terminar de encher as floreiras&#10;Plantar as Carpentarias&#10;Travar as Carpentarias&#10;Regar todas as palmeiras"></textarea>
+  </div>
+
+  <div class="campo-grupo">
+    <label class="campo-lbl">Observações</label>
+    <input class="campo-inp" type="text" id="meta-obs" placeholder="Ex: Meio período, levar equipamento X...">
+  </div>
+
+  <button class="btn-meta" onclick="salvarMeta()">Publicar meta do dia</button>
+
+  <div style="margin-top:24px">
+    <div class="stit">Histórico de metas</div>
+    <div id="meta-historico"></div>
+  </div>
+</div>
+
+<!-- ===== CAMPO ===== -->
+<div class="aba" id="aba-campo">
+  <div class="campo-info">
+    <div class="ci-lbl">PROJETO DE HOJE</div>
+    <div class="ci-val" id="c-proj-nome">Selecione abaixo</div>
+  </div>
+
+  <div class="campo-grupo">
+    <label class="campo-lbl">Data do apontamento</label>
+    <input class="campo-inp" type="date" id="c-data">
+  </div>
+
+  <div class="campo-grupo">
+    <label class="campo-lbl">Projeto em execução</label>
+    <div style="display:flex;gap:8px">
+      <select class="campo-sel" id="c-select-proj" style="flex:1" onchange="selecionarProjetoCampo()">
+        <option value="">— Selecionar projeto —</option>
+      </select>
+      <button class="btn-acao p" style="flex-shrink:0;padding:12px 16px;border-radius:10px" onclick="selecionarProjetoCampo()">OK</button>
+    </div>
+  </div>
+
+  <div id="c-form" style="display:none">
+
+    <!-- EQUIPE -->
+    <div class="campo-grupo">
+      <label class="campo-lbl">Equipe presente hoje — quantidade</label>
+      <div class="equipe-grid" id="c-equipe-grid">
+        <div class="eq-item"><div><div class="eq-nome">Gerente</div><div class="eq-diaria">R$ 255,34</div></div><input type="number" min="0" max="10" value="0" data-funcao="Gerente" data-diaria="255.34" class="eq-qtd campo-inp" style="width:60px;padding:6px;text-align:center" oninput="calcularCustoCampo()"></div>
+        <div class="eq-item"><div><div class="eq-nome">Encarregado</div><div class="eq-diaria">R$ 220,68</div></div><input type="number" min="0" max="10" value="0" data-funcao="Encarregado" data-diaria="220.68" class="eq-qtd campo-inp" style="width:60px;padding:6px;text-align:center" oninput="calcularCustoCampo()"></div>
+        <div class="eq-item"><div><div class="eq-nome">Jardineiro</div><div class="eq-diaria">R$ 172,11</div></div><input type="number" min="0" max="10" value="0" data-funcao="Jardineiro" data-diaria="172.11" class="eq-qtd campo-inp" style="width:60px;padding:6px;text-align:center" oninput="calcularCustoCampo()"></div>
+        <div class="eq-item"><div><div class="eq-nome">Diarista</div><div class="eq-diaria">R$ 110,00</div></div><input type="number" min="0" max="10" value="0" data-funcao="Diarista" data-diaria="110" class="eq-qtd campo-inp" style="width:60px;padding:6px;text-align:center" oninput="calcularCustoCampo()"></div>
+      </div>
+    </div>
+
+    <!-- ALIMENTAÇÃO -->
+    <div class="campo-grupo">
+      <label class="campo-lbl">Alimentação</label>
+      <div class="campo-row">
+        <div><label class="campo-lbl" style="font-size:11px">Nº marmitas</label><input class="campo-inp" type="number" id="c-marmitas" min="0" value="0" oninput="calcularCustoCampo()"></div>
+        <div><label class="campo-lbl" style="font-size:11px">R$ por marmita</label><input class="campo-inp" type="number" id="c-vlr-marmita" min="0" step="0.01" value="20" oninput="calcularCustoCampo()"></div>
+      </div>
+    </div>
+
+    <!-- VEÍCULOS -->
+    <div class="campo-grupo">
+      <label class="campo-lbl">Veículos utilizados</label>
+      <div class="campo-row" style="margin-bottom:8px">
+        <div>
+          <label class="campo-lbl" style="font-size:11px">Veículo 1</label>
+          <select class="campo-sel" id="c-veiculo" onchange="calcularCustoCampo()">
+            <option value="">— Nenhum —</option>
+            <option value="Ducato">Ducato</option>
+            <option value="Uno">Uno</option>
+            <option value="Siena">Siena</option>
+            <option value="Toro">Toro</option>
+            <option value="Civic">Civic</option>
+            <option value="Outro">Outro</option>
+          </select>
+        </div>
+        <div>
+          <label class="campo-lbl" style="font-size:11px">KM rodado</label>
+          <input class="campo-inp" type="number" id="c-km" min="0" value="0" oninput="calcularCustoCampo()">
+        </div>
+      </div>
+      <div class="campo-row">
+        <div>
+          <label class="campo-lbl" style="font-size:11px">Veículo 2 (opcional)</label>
+          <select class="campo-sel" id="c-veiculo2" onchange="calcularCustoCampo()">
+            <option value="">— Nenhum —</option>
+            <option value="Ducato">Ducato</option>
+            <option value="Uno">Uno</option>
+            <option value="Siena">Siena</option>
+            <option value="Toro">Toro</option>
+            <option value="Civic">Civic</option>
+            <option value="Outro">Outro</option>
+          </select>
+        </div>
+        <div>
+          <label class="campo-lbl" style="font-size:11px">KM rodado</label>
+          <input class="campo-inp" type="number" id="c-km2" min="0" value="0" oninput="calcularCustoCampo()">
+        </div>
+      </div>
+    </div>
+
+    <!-- PREVIEW CUSTO -->
+    <div class="custo-preview">
+      <div class="cp-tit">CUSTO DO DIA — CALCULADO AUTOMATICAMENTE</div>
+      <div class="cp-grid">
+        <div class="cp-item"><div class="cp-lbl">Mão de obra</div><div class="cp-val" id="cp-mo">R$ 0,00</div></div>
+        <div class="cp-item"><div class="cp-lbl">Alimentação</div><div class="cp-val" id="cp-ali">R$ 0,00</div></div>
+        <div class="cp-item"><div class="cp-lbl">Veículo (fixo)</div><div class="cp-val" id="cp-vfix">R$ 0,00</div></div>
+        <div class="cp-item"><div class="cp-lbl">Combustível (km)</div><div class="cp-val" id="cp-comb">R$ 0,00</div></div>
+        <div class="cp-item"><div class="cp-lbl">Equip/Ferramentas</div><div class="cp-val">R$ 43,76</div></div>
+        <div class="cp-item"><div class="cp-lbl">Vale Transporte</div><div class="cp-val" id="cp-vt">R$ 0,00</div></div>
+        <div class="cp-total"><span class="cp-total-lbl">TOTAL DO DIA</span><span class="cp-total-val" id="cp-total">R$ 0,00</span></div>
+      </div>
+    </div>
+
+    <!-- TAREFAS -->
+    <div class="stit">Tarefas — marcar concluídas</div>
+    <div id="c-tarefas"></div>
+
+    <!-- OCORRÊNCIA -->
+    <div class="oc-form">
+      <div class="oc-tit">⚠ Registrar ocorrência</div>
+      <textarea class="campo-ta" id="c-ocorrencia" placeholder="Descreva o problema encontrado em campo..."></textarea>
+    </div>
+
+    <!-- GASTOS EXTRAS -->
+    <div class="campo-grupo" style="margin-top:16px">
+      <label class="campo-lbl">Gastos extras (R$)</label>
+      <div class="campo-row">
+        <input class="campo-inp" type="number" id="c-extras-val" min="0" step="0.01" value="0" oninput="calcularCustoCampo()" placeholder="Valor">
+        <input class="campo-inp" type="text" id="c-extras-desc" placeholder="Descrição">
+      </div>
+    </div>
+
+    <!-- PROGRESSO -->
+    <div class="campo-grupo">
+      <label class="campo-lbl">Atualizar % de conclusão do projeto</label>
+      <input type="range" min="0" max="100" step="5" id="c-prog-range" style="width:100%;accent-color:var(--vm);" oninput="document.getElementById('c-prog-val').textContent=this.value+'%'">
+      <div style="text-align:center;font-family:'DM Mono',monospace;font-size:18px;color:var(--vd);margin-top:6px" id="c-prog-val">50%</div>
+    </div>
+
+    <button class="btn-campo" onclick="registrarCampo()">Enviar registro do dia</button>
+  </div>
+
+  <!-- HISTÓRICO DE REGISTROS -->
+  <div style="margin-top:28px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <span class="stit" style="margin-bottom:0">Histórico de registros</span>
+      <select class="campo-sel" id="reg-filtro-proj" style="width:auto;font-size:12px;padding:6px 10px" onchange="renderRegistros()">
+        <option value="">Todos os projetos</option>
+      </select>
+    </div>
+    <div id="registros-lista"></div>
+  </div>
+</div>
+
+<!-- ===== SEMANA ===== -->
+
+<div class="aba" id="aba-semana">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+    <span class="stit" id="semana-tit" style="margin-bottom:0">Cronograma quinzenal</span>
+    <button class="btn-acao p" style="padding:8px 14px;border-radius:10px" onclick="abrirAddCronograma('')">+ Adicionar</button>
+  </div>
+  <div id="semana-grid"></div>
+</div>
+
+<!-- ===== MODAL PROJETO ===== -->
+<div class="modal-ov" id="m-projeto">
+  <div class="modal">
+    <div class="modal-tit"><button class="mfechar" onclick="fecharModal('m-projeto')">×</button>Novo projeto</div>
+    <div class="campo-grupo"><label class="campo-lbl">Nome do cliente / projeto</label><input class="campo-inp" id="pj-nome" type="text" placeholder="Ex: Residência Silva"></div>
+    <div class="campo-grupo"><label class="campo-lbl">Tipo</label><select class="campo-sel" id="pj-tipo"><option value="execucao">Execução</option><option value="manutencao">Manutenção</option><option value="irrigacao">Irrigação</option><option value="lago">Lago</option></select></div>
+    <div class="campo-grupo"><label class="campo-lbl">Endereço / bairro</label><input class="campo-inp" id="pj-end" type="text" placeholder="Bairro, cidade"></div>
+    <div class="campo-row" style="margin-bottom:16px">
+      <div class="campo-grupo" style="margin-bottom:0"><label class="campo-lbl">Início</label><input class="campo-inp" id="pj-ini" type="date"></div>
+      <div class="campo-grupo" style="margin-bottom:0"><label class="campo-lbl">Previsão fim</label><input class="campo-inp" id="pj-fim" type="date"></div>
+    </div>
+    <div class="campo-grupo">
+      <label class="campo-lbl">Custo previsto total (R$)</label>
+      <input class="campo-inp" id="pj-custo-prev" type="number" step="0.01" min="0" placeholder="Ex: 15000">
+    </div>
+    <div class="campo-grupo">
+      <label class="campo-lbl">Valor do contrato (R$)</label>
+      <input class="campo-inp" id="pj-contrato" type="number" step="0.01" min="0" placeholder="Ex: 25000">
+    </div>
+    <div class="campo-grupo"><label class="campo-lbl">Tarefas do escopo (uma por linha)</label><textarea class="campo-ta" id="pj-tarefas" placeholder="Ex:&#10;Instalar irrigação&#10;Plantar espécies do projeto&#10;Acabamento com brita"></textarea></div>
+    <div class="campo-grupo"><label class="campo-lbl">Observações</label><textarea class="campo-ta" id="pj-obs" placeholder="Notas importantes..."></textarea></div>
+    <button class="btn-salvar" onclick="salvarProjeto()">Salvar projeto</button>
+  </div>
+</div>
+
+<!-- ===== MODAL DETALHE ===== -->
+<div class="modal-ov" id="m-detalhe">
+  <div class="modal">
+    <div class="modal-tit"><button class="mfechar" onclick="fecharModal('m-detalhe')">×</button><span id="det-tit"></span></div>
+    <div id="det-corpo"></div>
+  </div>
+</div>
+
+<!-- MODAL EDITAR PROJETO -->
+<div class="modal-ov" id="m-edit-proj">
+  <div class="modal">
+    <div class="modal-tit"><button class="mfechar" onclick="fecharModal('m-edit-proj')">×</button>Editar projeto</div>
+    <input type="hidden" id="edit-proj-id">
+    <div class="campo-grupo"><label class="campo-lbl">Nome do cliente / projeto</label><input class="campo-inp" id="edit-proj-nome" type="text"></div>
+    <div class="campo-grupo"><label class="campo-lbl">Tipo</label>
+      <select class="campo-sel" id="edit-proj-tipo">
+        <option value="execucao">Execução</option>
+        <option value="manutencao">Manutenção</option>
+        <option value="irrigacao">Irrigação</option>
+        <option value="lago">Lago</option>
+      </select>
+    </div>
+    <div class="campo-grupo"><label class="campo-lbl">Endereço / bairro</label><input class="campo-inp" id="edit-proj-end" type="text"></div>
+    <div class="campo-row" style="margin-bottom:16px">
+      <div class="campo-grupo" style="margin-bottom:0"><label class="campo-lbl">Início</label><input class="campo-inp" id="edit-proj-ini" type="date"></div>
+      <div class="campo-grupo" style="margin-bottom:0"><label class="campo-lbl">Previsão fim</label><input class="campo-inp" id="edit-proj-fim" type="date"></div>
+    </div>
+    <div class="campo-grupo"><label class="campo-lbl">Custo previsto total (R$)</label><input class="campo-inp" id="edit-proj-custo" type="number" step="0.01" min="0"></div>
+    <div class="campo-grupo"><label class="campo-lbl">Valor do contrato (R$)</label><input class="campo-inp" id="edit-proj-contrato" type="number" step="0.01" min="0"></div>
+    <div class="campo-grupo"><label class="campo-lbl">Tarefas do escopo (uma por linha)</label><textarea class="campo-ta" id="edit-proj-tarefas"></textarea></div>
+    <div class="campo-grupo"><label class="campo-lbl">Observações</label><textarea class="campo-ta" id="edit-proj-obs"></textarea></div>
+    <button class="btn-salvar" onclick="salvarEdicaoProjeto()">Salvar alterações</button>
+  </div>
+</div>
+
+<!-- MODAL EDITAR META -->
+<div class="modal-ov" id="m-edit-meta">
+  <div class="modal">
+    <div class="modal-tit"><button class="mfechar" onclick="fecharModal('m-edit-meta')">×</button>Editar meta</div>
+    <input type="hidden" id="edit-meta-id">
+    <div class="campo-grupo"><label class="campo-lbl">Projeto</label><select class="campo-sel" id="edit-meta-projeto"></select></div>
+    <div class="campo-grupo">
+      <label class="campo-lbl">Equipe — quantidade por função</label>
+      <div class="equipe-grid" id="edit-meta-equipe-grid">
+        <div class="eq-item"><div><div class="eq-nome">Gerente</div><div class="eq-diaria">R$ 255,34/dia</div></div><input type="number" min="0" max="10" value="0" data-funcao="Gerente" class="eq-qtd campo-inp" style="width:60px;padding:6px;text-align:center"></div>
+        <div class="eq-item"><div><div class="eq-nome">Encarregado</div><div class="eq-diaria">R$ 220,68/dia</div></div><input type="number" min="0" max="10" value="0" data-funcao="Encarregado" class="eq-qtd campo-inp" style="width:60px;padding:6px;text-align:center"></div>
+        <div class="eq-item"><div><div class="eq-nome">Jardineiro</div><div class="eq-diaria">R$ 172,11/dia</div></div><input type="number" min="0" max="10" value="0" data-funcao="Jardineiro" class="eq-qtd campo-inp" style="width:60px;padding:6px;text-align:center"></div>
+        <div class="eq-item"><div><div class="eq-none">Diarista</div><div class="eq-diaria">R$ 110,00/dia</div></div><input type="number" min="0" max="10" value="0" data-funcao="Diarista" class="eq-qtd campo-inp" style="width:60px;padding:6px;text-align:center"></div>
+      </div>
+    </div>
+    <div class="campo-grupo"><label class="campo-lbl">Tarefas (uma por linha)</label><textarea class="campo-ta" id="edit-meta-tarefas"></textarea></div>
+    <div class="campo-grupo"><label class="campo-lbl">Observações</label><input class="campo-inp" type="text" id="edit-meta-obs"></div>
+    <button class="btn-salvar" onclick="confirmarPIN('salvarEdicaoMeta')">Salvar alterações</button>
+  </div>
+</div>
+
+<!-- MODAL EDITAR REGISTRO -->
+<div class="modal-ov" id="m-edit-reg">
+  <div class="modal">
+    <div class="modal-tit"><button class="mfechar" onclick="fecharModal('m-edit-reg')">×</button>Editar registro</div>
+    <input type="hidden" id="edit-reg-id">
+    <div class="campo-grupo"><label class="campo-lbl">Data</label><input class="campo-inp" type="date" id="edit-reg-data"></div>
+    <div class="campo-grupo"><label class="campo-lbl">Ocorrência</label><textarea class="campo-ta" id="edit-reg-ocorrencia"></textarea></div>
+    <div class="campo-grupo"><label class="campo-lbl">Gastos extras (R$)</label><input class="campo-inp" type="number" id="edit-reg-extras" step="0.01" min="0"></div>
+    <div class="campo-grupo"><label class="campo-lbl">Descrição do gasto extra</label><input class="campo-inp" type="text" id="edit-reg-extras-desc"></div>
+    <div class="campo-grupo"><label class="campo-lbl">Progresso (%)</label><input class="campo-inp" type="number" id="edit-reg-progresso" min="0" max="100"></div>
+    <button class="btn-salvar" onclick="confirmarPIN('salvarEdicaoRegistro')">Salvar alterações</button>
+  </div>
+</div>
+
+<!-- MODAL PIN -->
+<div class="modal-ov" id="m-pin">
+  <div class="modal" style="padding-bottom:32px">
+    <div class="modal-tit"><button class="mfechar" onclick="fecharModal('m-pin')">×</button>🔒 Acesso gestor</div>
+    <div style="font-size:13px;color:var(--txts);margin-bottom:16px">Digite o PIN para continuar</div>
+    <input class="campo-inp" type="password" id="pin-input" inputmode="numeric" maxlength="4" placeholder="••••" style="font-size:24px;text-align:center;letter-spacing:8px">
+    <div style="font-size:12px;color:var(--erro);margin-top:8px;display:none" id="pin-erro">PIN incorreto</div>
+    <button class="btn-salvar" style="margin-top:16px" onclick="validarPIN()">Confirmar</button>
+  </div>
+</div>
+
+<!-- MODAL CRONOGRAMA -->
+<div class="modal-ov" id="m-cronograma">
+  <div class="modal">
+    <div class="modal-tit"><button class="mfechar" onclick="fecharModal('m-cronograma')">×</button><span id="cron-modal-tit">Adicionar ao cronograma</span></div>
+    <input type="hidden" id="cron-id">
+    <div class="campo-grupo">
+      <label class="campo-lbl">Data</label>
+      <input class="campo-inp" type="date" id="cron-data">
+    </div>
+    <div class="campo-grupo">
+      <label class="campo-lbl">Tipo</label>
+      <div style="display:flex;gap:8px">
+        <button type="button" class="btn-acao" id="cron-tipo-projeto" style="flex:1;background:var(--vd);color:var(--branco)" onclick="cronSelecionarTipo('projeto')">Projeto</button>
+        <button type="button" class="btn-acao" id="cron-tipo-manual" style="flex:1" onclick="cronSelecionarTipo('manual')">Avulso</button>
+      </div>
+    </div>
+    <div id="cron-bloco-projeto">
+      <div class="campo-grupo">
+        <label class="campo-lbl">Projeto</label>
+        <select class="campo-sel" id="cron-projeto"><option value="">— Selecionar —</option></select>
+      </div>
+      <div class="campo-grupo">
+        <label class="campo-lbl">Tarefa / atividade</label>
+        <input class="campo-inp" type="text" id="cron-tarefa" placeholder="Ex: Plantio de herbáceas">
+      </div>
+    </div>
+    <div id="cron-bloco-manual" style="display:none">
+      <div class="campo-grupo">
+        <label class="campo-lbl">Descrição (avulso)</label>
+        <input class="campo-inp" type="text" id="cron-manual" placeholder="Ex: Feriado, Recebimento de insumos, Visita técnica">
+      </div>
+    </div>
+    <button class="btn-salvar" onclick="salvarCronograma()">Salvar no cronograma</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getFirestore, doc, setDoc, deleteDoc, onSnapshot, updateDoc, collection } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
 const firebaseConfig = {
   apiKey: "AIzaSyCe5c7z-CBesIw3hR9TOBl8EYUdEtkl0XY",
   authDomain: "indoor-hub.firebaseapp.com",
@@ -37,691 +603,1249 @@ const firebaseConfig = {
   messagingSenderId: "1042863056704",
   appId: "1:1042863056704:web:58598bf4aea53d2b01fca5"
 };
-firebase.initializeApp(firebaseConfig);
-const db = firebase.firestore();
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
 
-// ===== EMAILJS =====
-const EMAILJS_SERVICE = 'service_rnrk6d9';
-const EMAILJS_TEMPLATE = 'template_1c6v8jd';
-const EMAILJS_TEMPLATE_GENERICO = 'template_g1by1jf';
-const EMAILJS_PUBLIC_KEY = 'nLg7kv7u1nqJ6yaVZ';
-emailjs.init(EMAILJS_PUBLIC_KEY);
+// ===== FIREBASE =====
+const SHEETS_URL = 'https://script.google.com/macros/s/AKfycbwL7PlmRmEnnbfF4H-3q-q4F0OZ_zCk2ELO3E7Fc848pe5ClUhGjR2z1euaIvJyqFdC/exec';
 
-function enviarAlertaEmail(item) {
-  const cats = { insumos:'Insumos', ferramentas:'Ferramentas', epis:'EPIs', consumo:'Uso & Consumo' };
-  emailjs.send(EMAILJS_SERVICE, EMAILJS_TEMPLATE, {
-    item_nome: item.nome,
-    categoria: cats[item.categoria] || item.categoria,
-    qtd_atual: item.qtd,
-    qtd_minimo: item.minimo
-  }).catch(e => console.warn('EmailJS:', e));
-}
-
-const CATEGORIAS = {
-  insumos:    { label:"Insumos",       emoji:"🌱", cor:"var(--vm)" },
-  ferramentas:{ label:"Ferramentas",   emoji:"🔧", cor:"var(--terra)" },
-  epis:       { label:"EPIs",          emoji:"🦺", cor:"#b85c2a" },
-  consumo:    { label:"Uso & Consumo", emoji:"⛽", cor:"#2a6b8b" },
-};
-
-const ESTOQUE_INICIAL = [{"id": 1, "nome": "Areia Grossa", "categoria": "insumos", "unidade": "M³", "qtd": 0.0, "minimo": 0.0, "preco": 160.0}, {"id": 2, "nome": "Areia Grossa (Saco 20kg)", "categoria": "insumos", "unidade": "SC", "qtd": 0.0, "minimo": 0.0, "preco": 160.0}, {"id": 3, "nome": "Argila Expandida 50L", "categoria": "insumos", "unidade": "UN", "qtd": 50.0, "minimo": 25.0, "preco": 34.0}, {"id": 4, "nome": "Basacote 15-09-12 (5 meses)", "categoria": "insumos", "unidade": "KG", "qtd": 0.0, "minimo": 1.0, "preco": 60.59}, {"id": 5, "nome": "Condicionador de Solo (20 Kg)", "categoria": "insumos", "unidade": "UN", "qtd": 0.0, "minimo": 25.0, "preco": 12.9}, {"id": 6, "nome": "Cacão de Pedra Goias", "categoria": "insumos", "unidade": "m²", "qtd": 0.0, "minimo": 0.0, "preco": 0.0}, {"id": 7, "nome": "Cacão de Pedra Miracema", "categoria": "insumos", "unidade": "m²", "qtd": 0.0, "minimo": 0.0, "preco": 0.0}, {"id": 8, "nome": "Cacão de Pedra São Tomé", "categoria": "insumos", "unidade": "m²", "qtd": 0.0, "minimo": 0.0, "preco": 1.5}, {"id": 9, "nome": "Calcário Dolomítico (25kg)", "categoria": "insumos", "unidade": "kg", "qtd": 2.0, "minimo": 2.0, "preco": 1.5}, {"id": 10, "nome": "Calha para Painel Vertical 5x15x7cm", "categoria": "insumos", "unidade": "M", "qtd": 0.0, "minimo": 0.0, "preco": 89.2}, {"id": 11, "nome": "Casca de Pinus Polida M (14kg)", "categoria": "insumos", "unidade": "UN", "qtd": 88.0, "minimo": 20.0, "preco": 28.4}, {"id": 12, "nome": "Casca de Pinus Polida P (14kg)", "categoria": "insumos", "unidade": "UN", "qtd": 58.0, "minimo": 20.0, "preco": 28.4}, {"id": 13, "nome": "Cepilho (bag)", "categoria": "insumos", "unidade": "BAG", "qtd": 0.0, "minimo": 0.0, "preco": 25.0}, {"id": 14, "nome": "Destinação de Resíduos", "categoria": "insumos", "unidade": "m³", "qtd": 0.0, "minimo": 0.0, "preco": 76.0}, {"id": 15, "nome": "Farinha de Osso (1Kg)", "categoria": "insumos", "unidade": "UN", "qtd": 4.0, "minimo": 0.0, "preco": 8.75}, {"id": 16, "nome": "Fert. Forth Jardim (Sacaria de 25kg)", "categoria": "insumos", "unidade": "KG", "qtd": 100.0, "minimo": 50.0, "preco": 8.68}, {"id": 17, "nome": "Fert. Forth Plantio (Sacaria de 25kg)", "categoria": "insumos", "unidade": "KG", "qtd": 150.0, "minimo": 75.0, "preco": 5.7}, {"id": 18, "nome": "Fertilizante Jardim Bonito 250ml", "categoria": "insumos", "unidade": "UN", "qtd": 7.0, "minimo": 0.0, "preco": 16.2}, {"id": 19, "nome": "Fertilizante NPK 10-10-10 ", "categoria": "insumos", "unidade": "KG", "qtd": 0.0, "minimo": 0.0, "preco": 4.28}, {"id": 20, "nome": "Fertilizante NPK 20-05-20", "categoria": "insumos", "unidade": "KG", "qtd": 0.0, "minimo": 40.0, "preco": 4.28}, {"id": 21, "nome": "Fertilizante Organomineral Nutree Planta (1L)", "categoria": "insumos", "unidade": "ML", "qtd": 0.0, "minimo": 1.0, "preco": 0.11}, {"id": 22, "nome": "Fertilizante Organomineral Nutree Raiz (1L)", "categoria": "insumos", "unidade": "ML", "qtd": 0.0, "minimo": 1.0, "preco": 0.11}, {"id": 23, "nome": "Fertlizante Foliar 100ml", "categoria": "insumos", "unidade": "UN", "qtd": 12.0, "minimo": 0.0, "preco": 45.48}, {"id": 24, "nome": "Formicida 50g", "categoria": "insumos", "unidade": "Un", "qtd": 20.0, "minimo": 10.0, "preco": 0.99}, {"id": 25, "nome": "Acaricida (500ml)", "categoria": "insumos", "unidade": "UN", "qtd": 3.0, "minimo": 0.0, "preco": 18.04}, {"id": 26, "nome": "Forth Coqueiro (10Kg)", "categoria": "insumos", "unidade": "SC", "qtd": 0.0, "minimo": 0.0, "preco": 134.3}, {"id": 27, "nome": "Inseticida (500ml)", "categoria": "insumos", "unidade": "UN", "qtd": 5.0, "minimo": 0.0, "preco": 15.92}, {"id": 28, "nome": "Fungicida (500mL)", "categoria": "insumos", "unidade": "UN", "qtd": 10.0, "minimo": 0.0, "preco": 22.09}, {"id": 29, "nome": "Gel para Plantio", "categoria": "insumos", "unidade": "KG", "qtd": 12.0, "minimo": 6.0, "preco": 52.03}, {"id": 30, "nome": "Granilha Bege A2 - 40kg (60kg/m²)", "categoria": "insumos", "unidade": "UN", "qtd": 0.0, "minimo": 0.0, "preco": 0.0}, {"id": 31, "nome": "Lambda Cialotrina (100 ml)", "categoria": "insumos", "unidade": "UN", "qtd": 0.0, "minimo": 2.0, "preco": 0.0}, {"id": 32, "nome": "Macdrain J 0,5m x 0,2m - un 3277", "categoria": "insumos", "unidade": "UN", "qtd": 0.0, "minimo": 0.0, "preco": 5.44}, {"id": 33, "nome": "Manta Geotextil 130g ", "categoria": "insumos", "unidade": "M2", "qtd": 230.0, "minimo": 0.0, "preco": 1.83}, {"id": 34, "nome": "New Potamag (K2O:14% CA:12% MG:3% S:19%) c/ 40Kg", "categoria": "insumos", "unidade": "SC", "qtd": 0.0, "minimo": 1.0, "preco": 210.0}, {"id": 35, "nome": "NPK 10-10-10 Líquido (100mL)", "categoria": "insumos", "unidade": "UN", "qtd": 6.0, "minimo": 0.0, "preco": 3.82}, {"id": 36, "nome": "Plastwall 12L PP Preto CB: 7899745701197", "categoria": "insumos", "unidade": "UN", "qtd": 0.0, "minimo": 0.0, "preco": 42.01}, {"id": 37, "nome": "Potamag Plus (K2O:30% MG:6% S:17%)", "categoria": "insumos", "unidade": "KG", "qtd": 2.0, "minimo": 0.0, "preco": 9.52}, {"id": 38, "nome": "Rachão 3 a 4", "categoria": "insumos", "unidade": "TN", "qtd": 0.0, "minimo": 0.0, "preco": 76.5}, {"id": 39, "nome": "Repelente Fumo Líquido (500ml)", "categoria": "insumos", "unidade": "UN", "qtd": 9.0, "minimo": 0.0, "preco": 10.87}, {"id": 40, "nome": "Repelente Óleo de Neem (500ml) ", "categoria": "insumos", "unidade": "UN", "qtd": 9.0, "minimo": 0.0, "preco": 11.57}, {"id": 41, "nome": "Rochas Naturais", "categoria": "insumos", "unidade": "TN", "qtd": 0.0, "minimo": 0.0, "preco": 0.0}, {"id": 42, "nome": "Rochas Naturais Basalticas (granulometria variada) 400kg/um", "categoria": "insumos", "unidade": "TN", "qtd": 0.0, "minimo": 0.0, "preco": 0.0}, {"id": 43, "nome": "Seixo | Cor: Branco 40kg (80kg/m²)", "categoria": "insumos", "unidade": "UN", "qtd": 0.0, "minimo": 0.0, "preco": 0.0}, {"id": 44, "nome": "Seixo | Cor: Cinza 40kg (80kg/m²)", "categoria": "insumos", "unidade": "UN", "qtd": 0.0, "minimo": 0.0, "preco": 49.0}, {"id": 45, "nome": "Seixo | Cor: Natural 40kg (80kg/m²)", "categoria": "insumos", "unidade": "KG", "qtd": 0.0, "minimo": 0.0, "preco": 22.0}, {"id": 46, "nome": "Separador de Grama", "categoria": "insumos", "unidade": "M", "qtd": 4.0, "minimo": 3.0, "preco": 1.7}, {"id": 47, "nome": "Sulfato de Cobre 150g", "categoria": "insumos", "unidade": "UN", "qtd": 0.0, "minimo": 0.0, "preco": 7.59}, {"id": 48, "nome": "Superfosfato Simples (50kg)", "categoria": "insumos", "unidade": "KG", "qtd": 0.0, "minimo": 1.0, "preco": 0.0}, {"id": 49, "nome": "Terra para vasos e floreiras (20kg)", "categoria": "insumos", "unidade": "UN", "qtd": 58.0, "minimo": 25.0, "preco": 14.29}, {"id": 50, "nome": "Terra Vegetal (20kg)", "categoria": "insumos", "unidade": "UN", "qtd": 40.0, "minimo": 25.0, "preco": 11.88}, {"id": 51, "nome": "Terra Vermelha (Argila)", "categoria": "insumos", "unidade": "M3", "qtd": 0.0, "minimo": 0.0, "preco": 20.0}, {"id": 52, "nome": "Tiamex 750 WG 20GR (Mata Lagarta Coqueiro)", "categoria": "insumos", "unidade": "UN", "qtd": 0.0, "minimo": 0.0, "preco": 28.0}, {"id": 53, "nome": "Turfa Liquida (K O 4,0% + B 0,5%)", "categoria": "insumos", "unidade": "L ", "qtd": 20.0, "minimo": 1.0, "preco": 23.9}, {"id": 54, "nome": "EPI - Boné com aba", "categoria": "epis", "unidade": "UN", "qtd": 0.0, "minimo": 0.0, "preco": 22.0}, {"id": 55, "nome": "EPI - Botina", "categoria": "epis", "unidade": "UN", "qtd": 5.0, "minimo": 4.0, "preco": 79.9}, {"id": 56, "nome": "EPI - Botina de Amarrar", "categoria": "epis", "unidade": "UN", "qtd": 0.0, "minimo": 0.0, "preco": 102.5}, {"id": 57, "nome": "EPI - Calça Sarja", "categoria": "epis", "unidade": "UN", "qtd": 11.0, "minimo": 4.0, "preco": 69.25}, {"id": 58, "nome": "EPI - Camiseta UV", "categoria": "epis", "unidade": "UN", "qtd": 12.0, "minimo": 4.0, "preco": 57.0}, {"id": 59, "nome": "EPI - Capacete", "categoria": "epis", "unidade": "UN", "qtd": 0.0, "minimo": 6.0, "preco": 14.05}, {"id": 60, "nome": "EPI - Chapéu de Brim", "categoria": "epis", "unidade": "UN", "qtd": 0.0, "minimo": 0.0, "preco": 24.0}, {"id": 61, "nome": "EPI - Chapéu de Palha", "categoria": "epis", "unidade": "UN", "qtd": 0.0, "minimo": 0.0, "preco": 29.9}, {"id": 62, "nome": "EPI - Chapéu de Tecido com Aba", "categoria": "epis", "unidade": "UN", "qtd": 0.0, "minimo": 0.0, "preco": 26.0}, {"id": 63, "nome": "EPI - Cinta Ergonomica", "categoria": "epis", "unidade": "UN", "qtd": 0.0, "minimo": 2.0, "preco": 59.9}, {"id": 64, "nome": "EPI - Cinto Paraquedista", "categoria": "epis", "unidade": "UN", "qtd": 3.0, "minimo": 2.0, "preco": 164.53}, {"id": 65, "nome": "EPI - Jugular Capacete", "categoria": "epis", "unidade": "UN", "qtd": 10.0, "minimo": 0.0, "preco": 3.95}, {"id": 66, "nome": "EPI - Luva Nylon Wave PU", "categoria": "epis", "unidade": "UN", "qtd": 10.0, "minimo": 10.0, "preco": 7.5}, {"id": 67, "nome": "EPI - Luva Vaqueta", "categoria": "epis", "unidade": "UN", "qtd": 6.0, "minimo": 2.0, "preco": 16.0}, {"id": 68, "nome": "EPI - Máscara Descartável (PFF2)", "categoria": "epis", "unidade": "UN", "qtd": 3.0, "minimo": 10.0, "preco": 5.82}, {"id": 69, "nome": "EPI - Oculos de Proteção", "categoria": "epis", "unidade": "UN", "qtd": 2.0, "minimo": 4.0, "preco": 4.0}, {"id": 70, "nome": "EPI - Protetor Auricular Tipo Concha 22DB", "categoria": "epis", "unidade": "UN", "qtd": 1.0, "minimo": 1.0, "preco": 46.15}, {"id": 71, "nome": "EPI - Protetor solar", "categoria": "epis", "unidade": "UN", "qtd": 0.0, "minimo": 2.0, "preco": 42.0}, {"id": 72, "nome": "Capa para Carretinha", "categoria": "consumo", "unidade": "PC", "qtd": 1.0, "minimo": 0.0, "preco": 300.0}, {"id": 73, "nome": "EPI - Repelente", "categoria": "epis", "unidade": "UN", "qtd": 6.0, "minimo": 6.0, "preco": 21.9}, {"id": 74, "nome": "EPI - Talabarte em Fita", "categoria": "epis", "unidade": "UN", "qtd": 3.0, "minimo": 2.0, "preco": 184.25}, {"id": 75, "nome": "Alicate de Corte", "categoria": "ferramentas", "unidade": "UN", "qtd": 1.0, "minimo": 0, "preco": 25.5}, {"id": 76, "nome": "Alicate para prensar acropress", "categoria": "ferramentas", "unidade": "UN", "qtd": 1.0, "minimo": 0, "preco": 309.8}, {"id": 77, "nome": "Alicate Universal 8'", "categoria": "ferramentas", "unidade": "UN", "qtd": 1.0, "minimo": 0, "preco": 52.54}, {"id": 78, "nome": "Arco de Serra", "categoria": "ferramentas", "unidade": "UN", "qtd": 1.0, "minimo": 0, "preco": 7.0}, {"id": 79, "nome": "Bag 1000L", "categoria": "ferramentas", "unidade": "UN", "qtd": 5.0, "minimo": 2, "preco": 32.0}, {"id": 80, "nome": "Balde com tampa", "categoria": "ferramentas", "unidade": "UN", "qtd": 2.0, "minimo": 0, "preco": 12.6}, {"id": 81, "nome": "Carrinho de carga", "categoria": "ferramentas", "unidade": "UN", "qtd": 1.0, "minimo": 0, "preco": 1000.0}, {"id": 82, "nome": "Carrinho de carga dobrável", "categoria": "ferramentas", "unidade": "UN", "qtd": 1.0, "minimo": 0, "preco": 382.87}, {"id": 83, "nome": "Carrinho para Enrolar Mangueira (50m)", "categoria": "ferramentas", "unidade": "UN", "qtd": 0.0, "minimo": 0, "preco": 21.0}, {"id": 84, "nome": "Carriola", "categoria": "ferramentas", "unidade": "UN", "qtd": 2.0, "minimo": 1, "preco": 239.9}, {"id": 85, "nome": "Cavadeira Articulada (1,80m)", "categoria": "ferramentas", "unidade": "UN", "qtd": 2.0, "minimo": 0, "preco": 158.0}, {"id": 86, "nome": "Cavadeira Articulada Pequena (1,20m)", "categoria": "ferramentas", "unidade": "UN", "qtd": 3.0, "minimo": 0, "preco": 34.5}, {"id": 87, "nome": "Chave de Corrente", "categoria": "ferramentas", "unidade": "UN", "qtd": 1.0, "minimo": 0, "preco": 37.0}, {"id": 88, "nome": "Chave Grifo 14", "categoria": "ferramentas", "unidade": "UN", "qtd": 1.0, "minimo": 0, "preco": 66.0}, {"id": 89, "nome": "Chave Inglesa 08'", "categoria": "ferramentas", "unidade": "UN", "qtd": 1.0, "minimo": 0, "preco": 38.72}, {"id": 90, "nome": "Chave Universal p/ aspersor rotor - Rain Bird", "categoria": "ferramentas", "unidade": "UN", "qtd": 2.0, "minimo": 0, "preco": 31.82}, {"id": 91, "nome": "Colher de Pedreiro", "categoria": "ferramentas", "unidade": "UN", "qtd": 0.0, "minimo": 0, "preco": 21.0}, {"id": 92, "nome": "Enxada Larga c/ cabo (250X300mm 1,5m)", "categoria": "ferramentas", "unidade": "UN", "qtd": 5.0, "minimo": 2, "preco": 47.4}, {"id": 93, "nome": "Enxadão Larga c/ cabo (250X300mm 2,0m)", "categoria": "ferramentas", "unidade": "UN", "qtd": 1.0, "minimo": 0, "preco": 47.4}, {"id": 94, "nome": "Escada Articulada 12 degraus 3X4", "categoria": "ferramentas", "unidade": "UN", "qtd": 1.0, "minimo": 0, "preco": 499.9}, {"id": 95, "nome": "Estilete Simples 18mm", "categoria": "ferramentas", "unidade": "UN", "qtd": 2.0, "minimo": 2, "preco": 2.6}, {"id": 96, "nome": "Facão para mato c/ cabo", "categoria": "ferramentas", "unidade": "UN", "qtd": 1.0, "minimo": 0, "preco": 37.0}, {"id": 97, "nome": "Jogo de Serra Copo", "categoria": "ferramentas", "unidade": "UN", "qtd": 1.0, "minimo": 0, "preco": 42.0}, {"id": 98, "nome": "Kit Cinta Catraca (9m)", "categoria": "ferramentas", "unidade": "UN", "qtd": 1.0, "minimo": 0, "preco": 59.0}, {"id": 99, "nome": "Lima c/ cabo", "categoria": "ferramentas", "unidade": "UN", "qtd": 2.0, "minimo": 1, "preco": 29.2}, {"id": 100, "nome": "Maçarico Multiuso", "categoria": "ferramentas", "unidade": "UN", "qtd": 1.0, "minimo": 0, "preco": 19.48}, {"id": 101, "nome": "Machado c/ Cabo", "categoria": "ferramentas", "unidade": "UN", "qtd": 1.0, "minimo": 0, "preco": 89.9}, {"id": 102, "nome": "Mangueira de Jardim Reforçada", "categoria": "ferramentas", "unidade": "M", "qtd": 0.0, "minimo": 30, "preco": 21.0}, {"id": 103, "nome": "Martelo Carpinteiro", "categoria": "ferramentas", "unidade": "UN", "qtd": 1.0, "minimo": 0, "preco": 31.0}, {"id": 104, "nome": "Martelo de Borracha", "categoria": "ferramentas", "unidade": "UN", "qtd": 1.0, "minimo": 0, "preco": 18.5}, {"id": 105, "nome": "Misturador de Combustível (1L)", "categoria": "ferramentas", "unidade": "UN", "qtd": 1.0, "minimo": 0, "preco": 35.0}, {"id": 106, "nome": "Motocultivador Stihl MH610.0", "categoria": "ferramentas", "unidade": "UN", "qtd": 1.0, "minimo": 0, "preco": 3999.0}, {"id": 107, "nome": "Motosserra Stihl MS 162", "categoria": "ferramentas", "unidade": "UN", "qtd": 1.0, "minimo": 0, "preco": 1170.0}, {"id": 108, "nome": "Multimetro Digital ET-1000 AZ", "categoria": "ferramentas", "unidade": "UN", "qtd": 2.0, "minimo": 0, "preco": 75.0}, {"id": 109, "nome": "Pá com Cabo ", "categoria": "ferramentas", "unidade": "UN", "qtd": 2.0, "minimo": 2, "preco": 75.0}, {"id": 110, "nome": "Pá para Jardinagem em Aço e Madeira", "categoria": "ferramentas", "unidade": "UN", "qtd": 0.0, "minimo": 0, "preco": 12.32}, {"id": 111, "nome": "Pá Vanga de Bico com cabo", "categoria": "ferramentas", "unidade": "UN", "qtd": 1.0, "minimo": 1, "preco": 48.0}, {"id": 112, "nome": "Picareta c/ cabo", "categoria": "ferramentas", "unidade": "UN", "qtd": 2.0, "minimo": 0, "preco": 89.8}, {"id": 113, "nome": "Pistola Aplicador de Silicone", "categoria": "ferramentas", "unidade": "UN", "qtd": 1.0, "minimo": 0, "preco": 68.0}, {"id": 114, "nome": "Polvilhadeira 1kg ", "categoria": "ferramentas", "unidade": "UN", "qtd": 0.0, "minimo": 0, "preco": 46.7}, {"id": 115, "nome": "Pulverizador com compressão prévia 20L ", "categoria": "ferramentas", "unidade": "UN", "qtd": 2.0, "minimo": 1, "preco": 29.71}, {"id": 116, "nome": "Pulverizador com compressão prévia 2L", "categoria": "ferramentas", "unidade": "UN", "qtd": 1.0, "minimo": 0, "preco": 29.71}, {"id": 117, "nome": "Pulverizador manual 500mL", "categoria": "ferramentas", "unidade": "UN", "qtd": 4.0, "minimo": 0, "preco": 6.66}, {"id": 118, "nome": "Rastelo Ferro", "categoria": "ferramentas", "unidade": "UN", "qtd": 3.0, "minimo": 2, "preco": 26.0}, {"id": 119, "nome": "Regador 1,5 L | Verde", "categoria": "ferramentas", "unidade": "UN", "qtd": 16.0, "minimo": 0, "preco": 6.37}, {"id": 120, "nome": "Regador 3,0 L | Verde", "categoria": "ferramentas", "unidade": "UN", "qtd": 0.0, "minimo": 0, "preco": 10.13}, {"id": 121, "nome": "Roçadeira Stihl FS120", "categoria": "ferramentas", "unidade": "UN", "qtd": 0.0, "minimo": 0, "preco": 1929.0}, {"id": 122, "nome": "Tesoura de Poda", "categoria": "ferramentas", "unidade": "UN", "qtd": 1.0, "minimo": 2, "preco": 27.0}, {"id": 123, "nome": "Tesoura Escritório", "categoria": "ferramentas", "unidade": "UN", "qtd": 0.0, "minimo": 0, "preco": 18.0}, {"id": 124, "nome": "Torqueza 12\"", "categoria": "ferramentas", "unidade": "UN", "qtd": 1.0, "minimo": 0, "preco": 75.0}, {"id": 125, "nome": "Trena de Aço ", "categoria": "ferramentas", "unidade": "UN", "qtd": 0.0, "minimo": 0, "preco": 25.8}, {"id": 126, "nome": "Trena Fita ", "categoria": "ferramentas", "unidade": "UN", "qtd": 1.0, "minimo": 0, "preco": 23.9}, {"id": 127, "nome": "Tubo Engraxante (80g)", "categoria": "ferramentas", "unidade": "UN", "qtd": 1.0, "minimo": 0, "preco": 30.0}, {"id": 128, "nome": "Vanga Reta", "categoria": "ferramentas", "unidade": "UN", "qtd": 4.0, "minimo": 2, "preco": 44.9}, {"id": 129, "nome": "Vassoura Grama de Plastico c/ cabo ", "categoria": "ferramentas", "unidade": "UN", "qtd": 0.0, "minimo": 0, "preco": 22.0}, {"id": 130, "nome": "Abraçadeira Nylon - Enforca Gato", "categoria": "consumo", "unidade": "PC", "qtd": 2.0, "minimo": 2.0, "preco": 6.5}, {"id": 131, "nome": "Adesivo de Poliuretano PU40 (440g)", "categoria": "consumo", "unidade": "UN", "qtd": 4.0, "minimo": 2.0, "preco": 11.34}, {"id": 132, "nome": "Arame recozido 12 / 14", "categoria": "consumo", "unidade": "KG", "qtd": 1.0, "minimo": 2.0, "preco": 29.27}, {"id": 133, "nome": "Cabo Cavadeira Articulada 1,40m", "categoria": "consumo", "unidade": "UN", "qtd": 0.0, "minimo": 2.0, "preco": 19.0}, {"id": 134, "nome": "Cabo Enxada ", "categoria": "consumo", "unidade": "UN", "qtd": 4.0, "minimo": 2.0, "preco": 21.0}, {"id": 135, "nome": "Cabo para picareta", "categoria": "consumo", "unidade": "PC", "qtd": 0.0, "minimo": 1.0, "preco": 21.75}, {"id": 136, "nome": "Cabo PP (2X2,5mm)", "categoria": "consumo", "unidade": "M", "qtd": 0.0, "minimo": 10.0, "preco": 6.1}, {"id": 137, "nome": "Camara de Ar 3.00/3.25X8\" Pneu Carriola", "categoria": "consumo", "unidade": "UN", "qtd": 0.0, "minimo": 1.0, "preco": 23.0}, {"id": 138, "nome": "Capa de Chuva Descartavel c/ capuz", "categoria": "consumo", "unidade": "UN", "qtd": 0.0, "minimo": 8.0, "preco": 5.0}, {"id": 139, "nome": "Capa de Chuva Forrada c/ capuz", "categoria": "consumo", "unidade": "UN", "qtd": 1.0, "minimo": 4.0, "preco": 5.0}, {"id": 140, "nome": "Carretel Roçadeira", "categoria": "consumo", "unidade": "UN", "qtd": 0.0, "minimo": 1.0, "preco": 60.0}, {"id": 141, "nome": "Conector Fêmea Engate Rápido", "categoria": "consumo", "unidade": "UN", "qtd": 10.0, "minimo": 4.0, "preco": 21.0}, {"id": 142, "nome": "Corda Trançada Poliester 10mm", "categoria": "consumo", "unidade": "M", "qtd": 200.0, "minimo": 20.0, "preco": 1.82}, {"id": 143, "nome": "Cunha madeira p/ cabo enxada", "categoria": "consumo", "unidade": "UN", "qtd": 10.0, "minimo": 2.0, "preco": 1.5}, {"id": 144, "nome": "Desengripante", "categoria": "consumo", "unidade": "PC", "qtd": 0.0, "minimo": 1.0, "preco": 9.85}, {"id": 145, "nome": "Disco de Corte (4.1/2 X 1,0)", "categoria": "consumo", "unidade": "PC", "qtd": 12.0, "minimo": 2.0, "preco": 1.5}, {"id": 146, "nome": "Disco Flap (4.1/2 X 1,0) - G-80", "categoria": "consumo", "unidade": "PC", "qtd": 4.0, "minimo": 2.0, "preco": 3.0}, {"id": 147, "nome": "Engate Rápido ", "categoria": "consumo", "unidade": "UN", "qtd": 13.0, "minimo": 2.0, "preco": 7.5}, {"id": 148, "nome": "Esticador p/ cabo de aco 3/16", "categoria": "consumo", "unidade": "UN", "qtd": 0.0, "minimo": 0.0, "preco": 7.0}, {"id": 149, "nome": "Estopa Branca", "categoria": "consumo", "unidade": "PC", "qtd": 0.0, "minimo": 0.0, "preco": 7.45}, {"id": 150, "nome": "Filme Stretch", "categoria": "consumo", "unidade": "kg", "qtd": 0.0, "minimo": 1.0, "preco": 15.9}, {"id": 151, "nome": "Fio de Nylon (Cortador de Grama)", "categoria": "consumo", "unidade": "M", "qtd": 10.0, "minimo": 5.0, "preco": 0.9}, {"id": 152, "nome": "Fita Crepe Larga", "categoria": "consumo", "unidade": "UN", "qtd": 9.0, "minimo": 5.0, "preco": 3.18}, {"id": 153, "nome": "Fita Dupla Face", "categoria": "consumo", "unidade": "UN", "qtd": 0.0, "minimo": 4.0, "preco": 13.0}, {"id": 154, "nome": "Fita Isolante Auto Fusão", "categoria": "consumo", "unidade": "PC", "qtd": 6.0, "minimo": 2.0, "preco": 24.0}, {"id": 155, "nome": "Fita Isolante G", "categoria": "consumo", "unidade": "UN", "qtd": 7.0, "minimo": 4.0, "preco": 6.77}, {"id": 156, "nome": "Fita Larga Transparente", "categoria": "consumo", "unidade": "UN", "qtd": 0.0, "minimo": 2.0, "preco": 4.9}, {"id": 157, "nome": "Fita Veda Rosca", "categoria": "consumo", "unidade": "UN", "qtd": 62.0, "minimo": 4.0, "preco": 6.5}, {"id": 158, "nome": "Fitilho", "categoria": "consumo", "unidade": "PC", "qtd": 1.0, "minimo": 1.0, "preco": 6.5}, {"id": 159, "nome": "Fluido para Radiador", "categoria": "consumo", "unidade": "L", "qtd": 0.0, "minimo": 0.0, "preco": 6.5}, {"id": 160, "nome": "Gás Butano 227G", "categoria": "consumo", "unidade": "PC", "qtd": 0.0, "minimo": 1.0, "preco": 15.0}, {"id": 161, "nome": "IMOBILIZADOS", "categoria": "consumo", "unidade": "UN", "qtd": 0.0, "minimo": 0.0, "preco": 19.43}, {"id": 162, "nome": "Linha de Pedreiro", "categoria": "consumo", "unidade": "UN", "qtd": 0.0, "minimo": 1.0, "preco": 9.96}, {"id": 163, "nome": "Lixa para Ferro (G100 ou G80)", "categoria": "consumo", "unidade": "UN", "qtd": 21.0, "minimo": 10.0, "preco": 3.25}, {"id": 164, "nome": "Lona Preta (20KG) - 4x110", "categoria": "consumo", "unidade": "m", "qtd": 110.0, "minimo": 110.0, "preco": 0.52}, {"id": 165, "nome": "Óleo para corrente - Motosserra", "categoria": "consumo", "unidade": "FR", "qtd": 1.0, "minimo": 1.0, "preco": 42.0}, {"id": 166, "nome": "Óleo Sthil 8017H 2T - Roçadeira, Motosserra, Perfurador e Soprador", "categoria": "consumo", "unidade": "UN", "qtd": 5.0, "minimo": 2.0, "preco": 45.0}, {"id": 167, "nome": "Óleo Sthtil 4T (10W30) - Motocultivador", "categoria": "consumo", "unidade": "UN", "qtd": 1.0, "minimo": 1.0, "preco": 50.0}, {"id": 168, "nome": "Pasta Lubrificante (160g)", "categoria": "consumo", "unidade": "UN", "qtd": 0.0, "minimo": 1.0, "preco": 13.0}, {"id": 169, "nome": "Pilha Alcalina AA", "categoria": "consumo", "unidade": "UN", "qtd": 0.0, "minimo": 0.0, "preco": 1.83}, {"id": 170, "nome": "Pilha Alcalina AAA", "categoria": "consumo", "unidade": "UN", "qtd": 0.0, "minimo": 0.0, "preco": 1.62}, {"id": 171, "nome": "Pilha Bateria CR2032", "categoria": "consumo", "unidade": "UN", "qtd": 0.0, "minimo": 0.0, "preco": 1.2}, {"id": 172, "nome": "Plug Macho Tomada Industrial (2P+T) 16A 220V", "categoria": "consumo", "unidade": "PC", "qtd": 1.0, "minimo": 2.0, "preco": 25.0}, {"id": 173, "nome": "Pneu 3.25/3.00X8 capacidade 100KG (4 LONAS)", "categoria": "consumo", "unidade": "UN", "qtd": 0.0, "minimo": 0.0, "preco": 42.0}, {"id": 174, "nome": "Prego 17x27 1kg", "categoria": "consumo", "unidade": "UN", "qtd": 0.0, "minimo": 0.0, "preco": 13.62}, {"id": 175, "nome": "Sacaria de ráfia - 45x60", "categoria": "consumo", "unidade": "UN", "qtd": 0.0, "minimo": 0.0, "preco": 1.23}, {"id": 176, "nome": "Serra Manual Starrett", "categoria": "consumo", "unidade": "UN", "qtd": 4.0, "minimo": 4.0, "preco": 12.65}, {"id": 177, "nome": "Tinta Spray Preto Fosco", "categoria": "consumo", "unidade": "UN", "qtd": 6.0, "minimo": 4.0, "preco": 18.75}, {"id": 178, "nome": "Torneira Plástica Jardim 1/2\" e 3/4\"", "categoria": "consumo", "unidade": "UN", "qtd": 10.0, "minimo": 2.0, "preco": 2.25}];
-
-// ===== ESTILOS INLINE =====
-const S = {
-  hdr: { background:'#2C3E2D', padding:'16px 20px 0', position:'sticky', top:0, zIndex:100 },
-  hdrTop: { display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:4 },
-  logo: { fontSize:13, fontWeight:600, letterSpacing:2, color:'#C49A6C', textTransform:'uppercase' },
-  hdrSub: { fontSize:18, fontWeight:300, color:'#FDFCF9', letterSpacing:-0.3, marginBottom:10 },
-  nav: { display:'flex', borderTop:'1px solid rgba(255,255,255,0.08)', overflowX:'auto' },
-  nb: (ativo) => ({ flex:1, minWidth:70, padding:'10px 4px', background:'none', border:'none', color: ativo?'#C49A6C':'#7A9E76', fontFamily:'DM Sans,sans-serif', fontSize:11, fontWeight:500, cursor:'pointer', borderBottom: ativo?'2px solid #C49A6C':'2px solid transparent', whiteSpace:'nowrap' }),
-  body: { padding:20 },
-  card: (border) => ({ background:'#FDFCF9', borderRadius:14, padding:16, marginBottom:12, border: border||'1px solid #E8E0D0' }),
-  stit: { fontSize:11, fontWeight:600, letterSpacing:1.5, textTransform:'uppercase', color:'#6B7B6C', marginBottom:12, display:'block' },
-  inp: { width:'100%', padding:'12px 14px', border:'1.5px solid #E8E0D0', borderRadius:10, fontFamily:'DM Sans,sans-serif', fontSize:14, color:'#1E2B1F', background:'#FDFCF9', outline:'none' },
-  sel: { width:'100%', padding:'12px 14px', border:'1.5px solid #E8E0D0', borderRadius:10, fontFamily:'DM Sans,sans-serif', fontSize:14, color:'#1E2B1F', background:'#FDFCF9', outline:'none' },
-  btnPrim: { width:'100%', padding:14, background:'#2C3E2D', color:'#FDFCF9', border:'none', borderRadius:12, fontFamily:'DM Sans,sans-serif', fontSize:14, fontWeight:500, cursor:'pointer' },
-  btnSec: (cor) => ({ padding:'7px 14px', background: cor||'#F5F0E8', color:'#1E2B1F', border:'1px solid #E8E0D0', borderRadius:8, fontFamily:'DM Sans,sans-serif', fontSize:12, fontWeight:500, cursor:'pointer' }),
-  btnEntrada: { padding:'6px 12px', background:'#E8F4E8', color:'#27AE60', border:'none', borderRadius:8, fontFamily:'DM Sans,sans-serif', fontSize:12, fontWeight:600, cursor:'pointer' },
-  btnSaida: { padding:'6px 12px', background:'#FDEDEC', color:'#C0392B', border:'none', borderRadius:8, fontFamily:'DM Sans,sans-serif', fontSize:12, fontWeight:600, cursor:'pointer' },
-  overlay: { position:'fixed', inset:0, background:'rgba(30,43,31,.7)', zIndex:200, display:'flex', alignItems:'flex-end' },
-  modal: { background:'#FDFCF9', borderRadius:'20px 20px 0 0', width:'100%', maxHeight:'90vh', overflowY:'auto', padding:24 },
-  label: { fontSize:12, fontWeight:500, color:'#6B7B6C', marginBottom:6, display:'block', letterSpacing:0.3 },
-  badge: (cat) => {
-    const cores = { insumos:{bg:'#E8F4E8',txt:'#4A6741'}, ferramentas:{bg:'#FFF3E0',txt:'#A67C52'}, epis:{bg:'#FDE8E0',txt:'#b85c2a'}, consumo:{bg:'#E0F0FD',txt:'#2a6b8b'} };
-    const c = cores[cat]||{bg:'#E8E0D0',txt:'#6B7B6C'};
-    return { fontSize:10, fontWeight:600, padding:'2px 8px', borderRadius:20, background:c.bg, color:c.txt, whiteSpace:'nowrap' };
-  },
-  statusBadge: (qtd, min) => {
-    if (min===0) return { background:'#F5F0E8', color:'#6B7B6C', padding:'2px 10px', borderRadius:20, fontSize:10, fontWeight:700 };
-    const pct = qtd/min;
-    if (qtd<=0) return { background:'#FDEDEC', color:'#C0392B', padding:'2px 10px', borderRadius:20, fontSize:10, fontWeight:700 };
-    if (pct<=0.5) return { background:'#FFF3E0', color:'#E67E22', padding:'2px 10px', borderRadius:20, fontSize:10, fontWeight:700 };
-    if (pct<=1) return { background:'#FFFDE0', color:'#B7950B', padding:'2px 10px', borderRadius:20, fontSize:10, fontWeight:700 };
-    return { background:'#E8F4E8', color:'#27AE60', padding:'2px 10px', borderRadius:20, fontSize:10, fontWeight:700 };
-  },
-  statusTxt: (qtd, min) => {
-    if (min===0) return 'SEM MÍN';
-    const pct = qtd/min;
-    if (qtd<=0) return 'ZERADO';
-    if (pct<=0.5) return '⚠ CRÍTICO';
-    if (pct<=1) return 'REPOR';
-    return 'OK';
-  },
-  fmtR: (v) => 'R$ '+(v||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}),
-};
-
-function App() {
-  const [itens, setItens] = useState([]);
-  const [movimentos, setMovimentos] = useState([]);
-  const [requisicoes, setRequisicoes] = useState([]);
-  const [carregando, setCarregando] = useState(true);
-
-  // ===== FIREBASE: listeners em tempo real =====
-  useEffect(() => {
-    // Itens — se a coleção estiver vazia, popular com ESTOQUE_INICIAL
-    const unsubItens = db.collection('estoque_itens').onSnapshot(snap => {
-      if (snap.empty) {
-        // Primeira vez: popular o Firebase com os itens iniciais
-        const batch = db.batch();
-        ESTOQUE_INICIAL.forEach(item => {
-          batch.set(db.collection('estoque_itens').doc(String(item.id)), item);
-        });
-        batch.commit()
-          .then(() => console.log('Estoque inicial populado'))
-          .catch(e => { console.error('Erro ao popular:', e); alert('Erro ao popular estoque: ' + e.message); });
-        // Mostrar os itens iniciais na tela imediatamente (otimista)
-        const arr = [...ESTOQUE_INICIAL];
-        arr.sort((a,b) => a.nome.localeCompare(b.nome));
-        setItens(arr);
-      } else {
-        const arr = snap.docs.map(d => d.data());
-        arr.sort((a,b) => a.nome.localeCompare(b.nome));
-        setItens(arr);
-      }
-      setCarregando(false);
-    }, err => {
-      console.error('Erro Firestore:', err);
-      alert('Erro ao conectar no banco: ' + err.message + '\n\nVerifique as regras do Firestore.');
-      setCarregando(false);
-    });
-
-    const unsubMovs = db.collection('estoque_movimentos').onSnapshot(snap => {
-      const arr = snap.docs.map(d => d.data());
-      arr.sort((a,b) => b.id - a.id);
-      setMovimentos(arr);
-    });
-
-    const unsubReqs = db.collection('estoque_requisicoes').onSnapshot(snap => {
-      const arr = snap.docs.map(d => d.data());
-      arr.sort((a,b) => b.id - a.id);
-      setRequisicoes(arr);
-    });
-
-    return () => { unsubItens(); unsubMovs(); unsubReqs(); };
-  }, []);
-
-  // ===== FIREBASE: funções de salvar =====
-  function fbSalvarItem(item) {
-    db.collection('estoque_itens').doc(String(item.id)).set(item).catch(e=>console.warn(e));
-  }
-  function fbSalvarMovimento(mov) {
-    db.collection('estoque_movimentos').doc(String(mov.id)).set(mov).catch(e=>console.warn(e));
-  }
-  function fbSalvarRequisicao(req) {
-    db.collection('estoque_requisicoes').doc(String(req.id)).set(req).catch(e=>console.warn(e));
-  }
-  const [novaReq, setNovaReq] = useState({solicitante:'',descricao:'',link:'',urgencia:'normal'});
-  const [reqItens, setReqItens] = useState([]); // lista de itens da requisição atual
-  const [itemTemp, setItemTemp] = useState({nome:'',qtd:1});
-  const [aba, setAba] = useState('dashboard');
-  const [catFiltro, setCatFiltro] = useState('todas');
-  const [alertaCat, setAlertaCat] = useState('todas');
-  const [busca, setBusca] = useState('');
-  const [modal, setModal] = useState(null);
-  const [form, setForm] = useState({});
-  const [novoItem, setNovoItem] = useState({nome:'',categoria:'insumos',unidade:'UN',qtd:0,minimo:0,preco:0});
-  const [toast, setToast] = useState('');
-
-  function adicionarItemReq() {
-    if (!itemTemp.nome.trim()) return alert('Informe o item.');
-    const qtd = Number(itemTemp.qtd) || 1;
-    setReqItens([...reqItens, { nome: itemTemp.nome.trim(), qtd }]);
-    setItemTemp({nome:'',qtd:1});
-  }
-
-  function removerItemReq(idx) {
-    setReqItens(reqItens.filter((_, i) => i !== idx));
-  }
-
-  function enviarRequisicao() {
-    if (!novaReq.solicitante.trim()) return alert('Informe seu nome.');
-    if (reqItens.length === 0) return alert('Adicione pelo menos um item à requisição.');
-    const req = {
-      id: Date.now(),
-      solicitante: novaReq.solicitante.trim(),
-      itens: reqItens,
-      descricao: novaReq.descricao.trim(),
-      link: novaReq.link.trim(),
-      urgencia: novaReq.urgencia,
-      data: new Date().toLocaleDateString('pt-BR'),
-      hora: new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}),
-      status: 'pendente'
-    };
-    fbSalvarRequisicao(req);
-
-    // Disparar e-mail de nova requisição
-    const listaTexto = reqItens.map(it => `  • ${it.nome} — ${it.qtd}x`).join('\n');
-    const urgTag = req.urgencia === 'urgente' ? ' 🔥 URGENTE' : '';
-    const corpoReq =
-      `Solicitante: ${req.solicitante}\n` +
-      `Urgência: ${req.urgencia === 'urgente' ? '🔥 URGENTE' : 'Normal'}\n` +
-      `Data: ${req.data} ${req.hora}\n\n` +
-      `ITENS:\n${listaTexto}\n\n` +
-      `Observação: ${req.descricao || '(nenhuma)'}\n` +
-      `Link: ${req.link || '(nenhum)'}`;
-    emailjs.send(EMAILJS_SERVICE, EMAILJS_TEMPLATE_GENERICO, {
-      assunto: `📋 Nova Requisição — ${req.solicitante}${urgTag}`,
-      titulo: 'Nova requisição de compra recebida!',
-      corpo: corpoReq
-    }).catch(e => console.warn('EmailJS req:', e));
-
-    setNovaReq({solicitante:'',descricao:'',link:'',urgencia:'normal'});
-    setReqItens([]);
-    setItemTemp({nome:'',qtd:1});
-    showToast('Requisição enviada ✓');
-  }
-
-  function atualizarStatusReq(id, status) {
-    const req = requisicoes.find(r=>r.id===id);
-    if (req) fbSalvarRequisicao({...req, status});
-    showToast(status==='aprovada'?'Requisição aprovada ✓':'Requisição recusada');
-  }
-
-  const reqPendentes = requisicoes.filter(r=>r.status==='pendente');
-
-  function showToast(msg) {
-    setToast(msg);
-    setTimeout(()=>setToast(''), 2500);
-  }
-
-  const itensFiltrados = useMemo(()=>itens.filter(i=>
-    (catFiltro==='todas'||i.categoria===catFiltro) &&
-    i.nome.toLowerCase().includes(busca.toLowerCase())
-  ),[itens,catFiltro,busca]);
-
-  const alertas = useMemo(()=>itens.filter(i=>i.minimo>0&&i.qtd<=i.minimo),[itens]);
-  const alertasFilt = useMemo(()=>alertas.filter(i=>alertaCat==='todas'||i.categoria===alertaCat),[alertas,alertaCat]);
-  const totalValor = itens.reduce((s,i)=>s+i.qtd*i.preco,0);
-
-  function registrarMovimento() {
-    const {tipo,qtd,responsavel,obs} = form;
-    const q = Number(qtd);
-    if (!tipo||!q||!responsavel) return alert('Preencha todos os campos obrigatórios.');
-    if (tipo==='saida'&&q>modal.item.qtd) return alert('Quantidade insuficiente em estoque.');
-    const novaQtd = tipo==='entrada' ? modal.item.qtd+q : modal.item.qtd-q;
-    const itemAtualizado = {...modal.item, qtd:novaQtd};
-    const novoMov = { id:Date.now(), itemId:modal.item.id, tipo, qtd:q, responsavel, obs:obs||'', data:new Date().toLocaleDateString('pt-BR') };
-    fbSalvarItem(itemAtualizado);
-    fbSalvarMovimento(novoMov);
-
-    // Disparar alerta por e-mail se a saída cruzou o mínimo
-    if (tipo==='saida' && modal.item.minimo>0) {
-      const estavaOk = modal.item.qtd > modal.item.minimo;
-      const ficouBaixo = novaQtd <= modal.item.minimo;
-      if (estavaOk && ficouBaixo) {
-        enviarAlertaEmail(itemAtualizado);
+async function enviarSheets(tipo, dados) {
+  try {
+    const dadosLimpos = { tipo };
+    for (const [k, v] of Object.entries(dados)) {
+      if (k === 'tarefas' && Array.isArray(v)) {
+        dadosLimpos['tarefasFeitas'] = v.filter(t => t.feita).map(t => t.texto || t).join('|');
+      } else if (Array.isArray(v)) {
+        dadosLimpos[k] = v.join('|');
+      } else if (v !== null && v !== undefined) {
+        dadosLimpos[k] = v;
       }
     }
-
-    setModal(null);
-    setForm({});
-    showToast(tipo==='entrada'?'Entrada registrada ✓':'Saída registrada ✓');
-  }
-
-  function enviarListaReposicao() {
-    if (alertas.length === 0) { showToast('Nenhum item para repor'); return; }
-    const cats = { insumos:'INSUMOS', ferramentas:'FERRAMENTAS', epis:'EPIs', consumo:'USO & CONSUMO' };
-    let texto = '';
-    Object.keys(cats).forEach(catKey => {
-      const itensCat = alertas.filter(i => i.categoria === catKey);
-      if (itensCat.length === 0) return;
-      texto += `\n${cats[catKey]}\n`;
-      itensCat.forEach(i => {
-        const status = i.qtd <= 0 ? 'ZERADO' : 'CRÍTICO';
-        texto += `  • ${i.nome} — atual: ${i.qtd} ${i.unidade} / mín: ${i.minimo} [${status}]\n`;
-      });
+    // Usar POST para suportar payloads maiores
+    fetch(SHEETS_URL, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify(dadosLimpos)
     });
-    emailjs.send(EMAILJS_SERVICE, EMAILJS_TEMPLATE_GENERICO, {
-      assunto: `📋 Lista de Reposição — INDOOR (${alertas.length} itens)`,
-      titulo: 'Itens que precisam de reposição:',
-      corpo: texto + `\nTotal: ${alertas.length} itens`
-    }).then(() => {
-      showToast('Lista enviada por e-mail ✓');
-    }).catch(e => {
-      console.warn('EmailJS lista:', e);
-      showToast('Erro ao enviar — verifique o template');
-    });
-  }
-
-  function adicionarItem() {
-    if (!novoItem.nome.trim()) return alert('Informe o nome do item.');
-    const novo = {...novoItem, id:Date.now(), qtd:Number(novoItem.qtd), minimo:Number(novoItem.minimo), preco:Number(novoItem.preco)};
-    fbSalvarItem(novo);
-    setModal(null);
-    setNovoItem({nome:'',categoria:'insumos',unidade:'UN',qtd:0,minimo:0,preco:0});
-    showToast('Item adicionado ✓');
-  }
-
-  // ===== RENDER =====
-  if (carregando) {
-    return (
-      <div style={{minHeight:'100vh',background:'#F5F0E8',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center'}}>
-        <div style={{fontSize:40,marginBottom:12}}>🌿</div>
-        <div style={{fontFamily:'DM Sans,sans-serif',fontSize:15,color:'#6B7B6C'}}>Carregando estoque...</div>
-      </div>
-    );
-  }
-
-  return (
-    <div style={{minHeight:'100vh',background:'#F5F0E8',paddingBottom:80}}>
-
-      {/* HEADER */}
-      <div style={S.hdr}>
-        <div style={S.hdrTop}>
-          <span style={S.logo}>INDOOR</span>
-          <span style={{fontFamily:'DM Mono,monospace',fontSize:11,color:'#7A9E76'}}>
-            {new Date().toLocaleDateString('pt-BR',{weekday:'short',day:'2-digit',month:'2-digit'})}
-          </span>
-        </div>
-        <div style={S.hdrSub}>Controle de Estoque</div>
-        <div style={S.nav}>
-          {['dashboard','estoque','alertas','movimentos','requisicao'].map(a=>(
-            <button key={a} style={S.nb(aba===a)} onClick={()=>setAba(a)}>
-              {a==='dashboard'?'Dashboard':a==='estoque'?'Estoque':a==='alertas'?`Alertas${alertas.length>0?` (${alertas.length})`:''}`:a==='movimentos'?'Histórico':'Requisições'}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div style={S.body}>
-
-        {/* DASHBOARD */}
-        {aba==='dashboard' && (
-          <>
-            {/* Resumo valor */}
-            <div style={{background:'#2C3E2D',borderRadius:14,padding:16,marginBottom:20,color:'#FDFCF9'}}>
-              <div style={{fontSize:11,color:'#7A9E76',letterSpacing:1,marginBottom:4}}>VALOR TOTAL EM ESTOQUE</div>
-              <div style={{fontFamily:'DM Mono,monospace',fontSize:28,fontWeight:500}}>{S.fmtR(totalValor)}</div>
-              <div style={{fontSize:12,color:'#7A9E76',marginTop:4}}>{itens.length} itens cadastrados</div>
-            </div>
-
-            {/* Cards por categoria */}
-            <span style={S.stit}>Por categoria</span>
-            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginBottom:20}}>
-              {Object.entries(CATEGORIAS).map(([key,cat])=>{
-                const itCat = itens.filter(i=>i.categoria===key);
-                const alts = alertas.filter(i=>i.categoria===key);
-                const handleClick = () => {
-                  if (key==='insumos') { setAba('estoque'); setCatFiltro('insumos'); }
-                  else if (alts.length>0) { setAba('alertas'); setAlertaCat(key); }
-                  else { setAba('estoque'); setCatFiltro(key); }
-                };
-                return (
-                  <div key={key} style={{...S.card(), borderLeft:`3px solid`, borderLeftColor:cat.cor, cursor:'pointer'}}
-                    onClick={handleClick}>
-                    <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:8}}>
-                      <span style={{fontSize:20}}>{cat.emoji}</span>
-                      <span style={S.badge(key)}>{cat.label}</span>
-                    </div>
-                    <div style={{fontFamily:'DM Mono,monospace',fontSize:24,fontWeight:500,color:'#2C3E2D'}}>{itCat.length}</div>
-                    <div style={{fontSize:11,color:'#6B7B6C',marginTop:2}}>
-                      {alts.length>0
-                        ? <span style={{color:'#E67E22'}}>⚠ {alts.length} para repor</span>
-                        : <span style={{color:'#27AE60'}}>tudo OK</span>}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-
-            {/* Requisições pendentes */}
-            {reqPendentes.length>0 && (
-              <>
-                <span style={S.stit}>Requisições pendentes</span>
-                {reqPendentes.slice(0,3).map(r=>(
-                  <div key={r.id} style={{...S.card(`1px solid ${r.urgencia==='urgente'?'#E67E22':'#E8E0D0'}`),borderLeft:`3px solid ${r.urgencia==='urgente'?'#E67E22':'#4A6741'}`}}>
-                    <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:8}}>
-                      <div style={{flex:1,marginRight:8}}>
-                        <div style={{fontSize:14,fontWeight:600,color:'#2C3E2D'}}>{(r.itens && r.itens.length) ? `${r.itens.length} ${r.itens.length>1?'itens':'item'}` : r.nome}</div>
-                        <div style={{fontSize:11,color:'#6B7B6C',marginTop:2}}>{r.data} {r.hora}{r.solicitante?` · 👤 ${r.solicitante}`:""}</div>
-                      </div>
-                      {r.urgencia==='urgente' && <span style={{background:'#FFF3E0',color:'#E67E22',fontSize:10,fontWeight:700,padding:'2px 8px',borderRadius:20,whiteSpace:'nowrap'}}>🔥 URGENTE</span>}
-                    </div>
-                    {r.itens && r.itens.length > 0 && (
-                      <div style={{marginBottom:10}}>
-                        {r.itens.map((it,idx)=>(
-                          <div key={idx} style={{display:'flex',justifyContent:'space-between',fontSize:13,padding:'3px 0',borderBottom:'1px solid #F5F0E8'}}>
-                            <span style={{color:'#1E2B1F'}}>{it.nome}</span>
-                            <span style={{fontFamily:'DM Mono,monospace',fontWeight:600,color:'#2C3E2D'}}>{it.qtd}x</span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                    {r.descricao && <div style={{fontSize:13,color:'#6B7B6C',marginBottom:10}}>{r.descricao}</div>}
-                    {r.link && <a href={r.link} target="_blank" rel="noreferrer" style={{fontSize:12,color:'#4A6741',display:'block',marginBottom:10,wordBreak:'break-all'}}>🔗 Ver produto</a>}
-                    <div style={{display:'flex',gap:8}}>
-                      <button style={{...S.btnEntrada,flex:1}} onClick={()=>atualizarStatusReq(r.id,'aprovada')}>✓ Aprovar</button>
-                      <button style={{...S.btnSaida,flex:1}} onClick={()=>atualizarStatusReq(r.id,'recusada')}>✗ Recusar</button>
-                    </div>
-                  </div>
-                ))}
-                {reqPendentes.length>3 && <div style={{textAlign:'center',fontSize:12,color:'#6B7B6C',marginTop:4,cursor:'pointer'}} onClick={()=>setAba('requisicao')}>Ver todas as {reqPendentes.length} requisições →</div>}
-              </>
-            )}
-            {alertas.length>0 && (
-              <>
-                <span style={S.stit}>Itens para repor</span>
-                {alertas.slice(0,5).map(item=>(
-                  <div key={item.id} style={{...S.card('1px solid #F5C6A0'),display:'flex',justifyContent:'space-between',alignItems:'center'}}>
-                    <div>
-                      <div style={{fontSize:14,fontWeight:600,color:'#2C3E2D'}}>{item.nome}</div>
-                      <div style={{fontSize:11,color:'#6B7B6C',marginTop:2}}>
-                        <span style={S.badge(item.categoria)}>{CATEGORIAS[item.categoria]?.emoji} {CATEGORIAS[item.categoria]?.label}</span>
-                        <span style={{marginLeft:8}}>Atual: <strong style={{color:item.qtd<=0?'#C0392B':'#E67E22'}}>{item.qtd} {item.unidade}</strong> · Mín: {item.minimo}</span>
-                      </div>
-                    </div>
-                    <button style={S.btnEntrada} onClick={()=>{setModal({tipo:'movimento',item});setForm({tipo:'entrada'});setAba('estoque');}}>↑ Entrada</button>
-                  </div>
-                ))}
-                {alertas.length>5 && <div style={{textAlign:'center',fontSize:12,color:'#6B7B6C',marginTop:4,cursor:'pointer'}} onClick={()=>setAba('alertas')}>Ver todos os {alertas.length} alertas →</div>}
-              </>
-            )}
-          </>
-        )}
-
-        {/* ESTOQUE */}
-        {aba==='estoque' && (
-          <>
-            <div style={{display:'flex',gap:8,marginBottom:16,flexWrap:'wrap'}}>
-              <input placeholder="🔍 Buscar item..." style={{...S.inp,flex:1,minWidth:140}} value={busca} onChange={e=>setBusca(e.target.value)} />
-              <select style={{...S.sel,width:'auto'}} value={catFiltro} onChange={e=>setCatFiltro(e.target.value)}>
-                <option value="todas">Todas</option>
-                {Object.entries(CATEGORIAS).map(([k,v])=><option key={k} value={k}>{v.emoji} {v.label}</option>)}
-              </select>
-            </div>
-            <button style={{...S.btnPrim,marginBottom:16}} onClick={()=>setModal({tipo:'addItem'})}>+ Novo item</button>
-            <div style={{fontSize:11,color:'#6B7B6C',marginBottom:8}}>{itensFiltrados.length} itens</div>
-            {itensFiltrados.map(item=>(
-              <div key={item.id} style={S.card()}>
-                <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:8}}>
-                  <div style={{flex:1,marginRight:8}}>
-                    <div style={{fontSize:14,fontWeight:600,color:'#2C3E2D',lineHeight:1.3}}>{item.nome}</div>
-                    <div style={{marginTop:4,display:'flex',alignItems:'center',gap:6,flexWrap:'wrap'}}>
-                      <span style={S.badge(item.categoria)}>{CATEGORIAS[item.categoria]?.emoji} {CATEGORIAS[item.categoria]?.label}</span>
-                      <span style={{...S.statusBadge(item.qtd,item.minimo)}}>{S.statusTxt(item.qtd,item.minimo)}</span>
-                    </div>
-                  </div>
-                  <div style={{textAlign:'right',flexShrink:0}}>
-                    <div style={{fontFamily:'DM Mono,monospace',fontSize:20,fontWeight:500,color:item.minimo>0&&item.qtd<=item.minimo?'#C0392B':'#2C3E2D'}}>{item.qtd}</div>
-                    <div style={{fontSize:11,color:'#6B7B6C'}}>{item.unidade}</div>
-                  </div>
-                </div>
-                {item.minimo>0 && (
-                  <div style={{marginBottom:10}}>
-                    <div style={{display:'flex',justifyContent:'space-between',fontSize:10,color:'#6B7B6C',marginBottom:3}}>
-                      <span>Estoque</span><span>Mín: {item.minimo} {item.unidade}</span>
-                    </div>
-                    <div style={{height:5,background:'#E8E0D0',borderRadius:4,overflow:'hidden'}}>
-                      <div style={{height:'100%',borderRadius:4,background:item.qtd<=0?'#C0392B':item.qtd/item.minimo<=0.5?'#E67E22':'#4A6741',width:`${Math.min(Math.max(item.qtd/item.minimo*100,0),100)}%`,transition:'width .4s'}} />
-                    </div>
-                  </div>
-                )}
-                <div style={{display:'flex',gap:8}}>
-                  <button style={{...S.btnEntrada,flex:1}} onClick={()=>{setModal({tipo:'movimento',item});setForm({tipo:'entrada'});}}>↑ Entrada</button>
-                  <button style={{...S.btnSaida,flex:1}} onClick={()=>{setModal({tipo:'movimento',item});setForm({tipo:'saida'});}}>↓ Saída</button>
-                </div>
-              </div>
-            ))}
-          </>
-        )}
-
-        {/* ALERTAS */}
-        {aba==='alertas' && (
-          alertas.length===0
-            ? <div style={{textAlign:'center',padding:60,color:'#27AE60'}}>
-                <div style={{fontSize:44}}>✅</div>
-                <div style={{fontSize:18,fontWeight:600,marginTop:10,color:'#2C3E2D'}}>Tudo em dia!</div>
-                <div style={{color:'#6B7B6C',marginTop:6,fontSize:13}}>Nenhum item abaixo do mínimo.</div>
-              </div>
-            : <>
-                <button style={{...S.btnPrim,marginBottom:16,display:'flex',alignItems:'center',justifyContent:'center',gap:8}} onClick={enviarListaReposicao}>
-                  📧 Enviar lista de reposição por e-mail
-                </button>
-                <div style={{display:'flex',gap:6,flexWrap:'wrap',marginBottom:16}}>
-                  <button style={S.btnSec(alertaCat==='todas'?'#2C3E2D':undefined)} onClick={()=>setAlertaCat('todas')}
-                    {...(alertaCat==='todas'?{style:{...S.btnSec(),...{background:'#2C3E2D',color:'#FDFCF9',border:'none'}}}:{})}>
-                    Todas ({alertas.length})
-                  </button>
-                  {Object.entries(CATEGORIAS).map(([key,cat])=>{
-                    const qtd = alertas.filter(i=>i.categoria===key).length;
-                    if (qtd===0) return null;
-                    return <button key={key} style={alertaCat===key?{...S.btnSec(),...{background:'#2C3E2D',color:'#FDFCF9',border:'none'}}:S.btnSec()} onClick={()=>setAlertaCat(key)}>
-                      {cat.emoji} {cat.label} ({qtd})
-                    </button>;
-                  })}
-                </div>
-                {alertasFilt.map(item=>(
-                  <div key={item.id} style={{...S.card('1px solid #F5C6A0')}}>
-                    <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:8}}>
-                      <div>
-                        <div style={{fontSize:14,fontWeight:600,color:'#2C3E2D'}}>{item.nome}</div>
-                        <div style={{marginTop:4,display:'flex',gap:6,flexWrap:'wrap',alignItems:'center'}}>
-                          <span style={S.badge(item.categoria)}>{CATEGORIAS[item.categoria]?.emoji} {CATEGORIAS[item.categoria]?.label}</span>
-                          <span style={{fontSize:11,color:'#6B7B6C'}}>Atual: <strong style={{color:item.qtd<=0?'#C0392B':'#E67E22'}}>{item.qtd} {item.unidade}</strong> · Mín: {item.minimo}</span>
-                        </div>
-                      </div>
-                      <span style={S.statusBadge(item.qtd,item.minimo)}>{S.statusTxt(item.qtd,item.minimo)}</span>
-                    </div>
-                    <div style={{height:5,background:'#E8E0D0',borderRadius:4,overflow:'hidden',marginBottom:10}}>
-                      <div style={{height:'100%',borderRadius:4,background:item.qtd<=0?'#C0392B':'#E67E22',width:`${Math.min(Math.max(item.qtd/item.minimo*100,0),100)}%`}} />
-                    </div>
-                    <button style={{...S.btnEntrada,width:'100%'}} onClick={()=>{setModal({tipo:'movimento',item});setForm({tipo:'entrada'});setAba('estoque');}}>↑ Registrar entrada</button>
-                  </div>
-                ))}
-              </>
-        )}
-
-        {/* HISTÓRICO */}
-        {aba==='movimentos' && (
-          movimentos.length===0
-            ? <div style={{textAlign:'center',padding:60,color:'#6B7B6C'}}>
-                <div style={{fontSize:40,marginBottom:10}}>📋</div>
-                <div style={{fontSize:14}}>Nenhuma movimentação registrada ainda</div>
-              </div>
-            : movimentos.map(m=>{
-                const item = itens.find(i=>i.id===m.itemId);
-                return (
-                  <div key={m.id} style={{...S.card(),borderLeft:`3px solid ${m.tipo==='entrada'?'#27AE60':'#C0392B'}`}}>
-                    <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:6}}>
-                      <div style={{fontSize:14,fontWeight:600,color:'#2C3E2D',flex:1,marginRight:8}}>{item?.nome||'—'}</div>
-                      <span style={{background:m.tipo==='entrada'?'#E8F4E8':'#FDEDEC',color:m.tipo==='entrada'?'#27AE60':'#C0392B',padding:'2px 10px',borderRadius:20,fontSize:10,fontWeight:700,whiteSpace:'nowrap'}}>
-                        {m.tipo==='entrada'?'↑ ENTRADA':'↓ SAÍDA'}
-                      </span>
-                    </div>
-                    <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8,marginBottom:6}}>
-                      <div style={{background:'#F5F0E8',borderRadius:8,padding:'8px 10px'}}>
-                        <div style={{fontSize:10,color:'#6B7B6C'}}>Quantidade</div>
-                        <div style={{fontFamily:'DM Mono,monospace',fontSize:14,fontWeight:500}}>{m.qtd} {item?.unidade}</div>
-                      </div>
-                      <div style={{background:'#F5F0E8',borderRadius:8,padding:'8px 10px'}}>
-                        <div style={{fontSize:10,color:'#6B7B6C'}}>Data</div>
-                        <div style={{fontFamily:'DM Mono,monospace',fontSize:14,fontWeight:500}}>{m.data}</div>
-                      </div>
-                    </div>
-                    <div style={{fontSize:12,color:'#6B7B6C'}}>👤 {m.responsavel}{m.obs?` · ${m.obs}`:''}</div>
-                  </div>
-                );
-              })
-        )}
-      </div>
-
-        {/* REQUISIÇÃO */}
-        {aba==='requisicao' && (
-          <>
-            {/* Formulário de nova requisição */}
-            <div style={S.card()}>
-              <div style={{fontSize:15,fontWeight:600,color:'#2C3E2D',marginBottom:16}}>📋 Nova requisição</div>
-              <label style={S.label}>SEU NOME *</label>
-              <input style={{...S.inp,marginBottom:16}} placeholder="Ex: João Silva" value={novaReq.solicitante} onChange={e=>setNovaReq(n=>({...n,solicitante:e.target.value}))} />
-
-              <label style={S.label}>ITENS DA REQUISIÇÃO *</label>
-              <div style={{background:'#F5F0E8',borderRadius:10,padding:12,marginBottom:12}}>
-                <div style={{display:'flex',gap:8,marginBottom:8}}>
-                  <input list="lista-itens-estoque" style={{...S.inp,flex:1}} placeholder="Buscar ou digitar item" value={itemTemp.nome} onChange={e=>setItemTemp(t=>({...t,nome:e.target.value}))} />
-                  <input type="number" min="1" style={{...S.inp,width:70,textAlign:'center'}} value={itemTemp.qtd} onChange={e=>setItemTemp(t=>({...t,qtd:e.target.value}))} />
-                  <button style={{...S.btnPrim,width:'auto',padding:'12px 16px'}} onClick={adicionarItemReq}>+</button>
-                </div>
-                <datalist id="lista-itens-estoque">
-                  {itens.map(i=><option key={i.id} value={i.nome} />)}
-                </datalist>
-                {reqItens.length === 0
-                  ? <div style={{fontSize:12,color:'#6B7B6C',textAlign:'center',padding:'8px 0'}}>Nenhum item adicionado ainda</div>
-                  : reqItens.map((it, idx)=>(
-                    <div key={idx} style={{display:'flex',justifyContent:'space-between',alignItems:'center',background:'#FDFCF9',borderRadius:8,padding:'8px 12px',marginBottom:6}}>
-                      <span style={{fontSize:13,flex:1}}>{it.nome}</span>
-                      <span style={{fontFamily:'DM Mono,monospace',fontSize:13,fontWeight:600,color:'#2C3E2D',marginRight:10}}>{it.qtd}x</span>
-                      <span onClick={()=>removerItemReq(idx)} style={{cursor:'pointer',color:'#C0392B',fontSize:16}}>✕</span>
-                    </div>
-                  ))
-                }
-              </div>
-
-              <label style={S.label}>OBSERVAÇÃO (opcional)</label>
-              <textarea style={{...S.inp,marginBottom:12,resize:'vertical',minHeight:60}} placeholder="Ex: Para a obra da Residência Silva, urgente para segunda" value={novaReq.descricao} onChange={e=>setNovaReq(n=>({...n,descricao:e.target.value}))} />
-              <label style={S.label}>🔗 LINK DO PRODUTO (opcional)</label>
-              <input style={{...S.inp,marginBottom:12}} placeholder="Cole um link de referência (Mercado Livre, Amazon, etc.)" value={novaReq.link} onChange={e=>setNovaReq(n=>({...n,link:e.target.value}))} />
-              <label style={S.label}>URGÊNCIA</label>
-              <div style={{display:'flex',gap:8,marginBottom:16}}>
-                {['normal','urgente'].map(u=>(
-                  <button key={u} style={{flex:1,padding:12,background:novaReq.urgencia===u?(u==='urgente'?'#E67E22':'#2C3E2D'):'#F5F0E8',color:novaReq.urgencia===u?'#FDFCF9':'#1E2B1F',border:'none',borderRadius:10,fontFamily:'DM Sans,sans-serif',fontSize:14,fontWeight:500,cursor:'pointer'}} onClick={()=>setNovaReq(n=>({...n,urgencia:u}))}>
-                    {u==='normal'?'Normal':'🔥 Urgente'}
-                  </button>
-                ))}
-              </div>
-              <button style={S.btnPrim} onClick={enviarRequisicao}>Enviar requisição</button>
-            </div>
-
-            {/* Histórico de requisições */}
-            {requisicoes.length>0 && (
-              <>
-                <span style={{...S.stit,marginTop:8}}>Histórico</span>
-                {requisicoes.map(r=>(
-                  <div key={r.id} style={{...S.card(),borderLeft:`3px solid ${r.status==='aprovada'?'#27AE60':r.status==='recusada'?'#C0392B':r.urgencia==='urgente'?'#E67E22':'#4A6741'}`}}>
-                    <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:8}}>
-                      <div style={{flex:1,marginRight:8}}>
-                        <div style={{fontSize:14,fontWeight:600,color:'#2C3E2D'}}>{(r.itens && r.itens.length) ? `${r.itens.length} ${r.itens.length>1?'itens':'item'}` : r.nome}</div>
-                        <div style={{fontSize:11,color:'#6B7B6C',marginTop:2}}>{r.data} {r.hora}{r.solicitante?` · 👤 ${r.solicitante}`:""}</div>
-                      </div>
-                      <span style={{
-                        fontSize:10,fontWeight:700,padding:'3px 10px',borderRadius:20,whiteSpace:'nowrap',
-                        background:r.status==='aprovada'?'#E8F4E8':r.status==='recusada'?'#FDEDEC':r.urgencia==='urgente'?'#FFF3E0':'#F5F0E8',
-                        color:r.status==='aprovada'?'#27AE60':r.status==='recusada'?'#C0392B':r.urgencia==='urgente'?'#E67E22':'#6B7B6C'
-                      }}>
-                        {r.status==='aprovada'?'✓ APROVADA':r.status==='recusada'?'✗ RECUSADA':r.urgencia==='urgente'?'🔥 URGENTE':'PENDENTE'}
-                      </span>
-                    </div>
-                    {r.itens && r.itens.length > 0 && (
-                      <div style={{marginBottom:8}}>
-                        {r.itens.map((it,idx)=>(
-                          <div key={idx} style={{display:'flex',justifyContent:'space-between',fontSize:13,padding:'4px 0',borderBottom:'1px solid #F5F0E8'}}>
-                            <span style={{color:'#1E2B1F'}}>{it.nome}</span>
-                            <span style={{fontFamily:'DM Mono,monospace',fontWeight:600,color:'#2C3E2D'}}>{it.qtd}x</span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                    {r.descricao && <div style={{fontSize:13,color:'#6B7B6C',marginBottom:r.link?8:0}}>{r.descricao}</div>}
-                    {r.link && <a href={r.link} target="_blank" rel="noreferrer" style={{fontSize:12,color:'#4A6741',display:'block',wordBreak:'break-all'}}>🔗 Ver produto</a>}
-                    {r.status==='pendente' && (
-                      <div style={{display:'flex',gap:8,marginTop:10}}>
-                        <button style={{...S.btnEntrada,flex:1}} onClick={()=>atualizarStatusReq(r.id,'aprovada')}>✓ Aprovar</button>
-                        <button style={{...S.btnSaida,flex:1}} onClick={()=>atualizarStatusReq(r.id,'recusada')}>✗ Recusar</button>
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </>
-            )}
-          </>
-        )}
-
-        {/* MODAL MOVIMENTO */}
-      {modal?.tipo==='movimento' && (
-        <div style={S.overlay} onClick={()=>setModal(null)}>
-          <div style={S.modal} onClick={e=>e.stopPropagation()}>
-            <div style={{fontSize:17,fontWeight:600,color:'#2C3E2D',marginBottom:4}}>{modal.item.nome}</div>
-            <div style={{marginBottom:18}}><span style={S.badge(modal.item.categoria)}>{CATEGORIAS[modal.item.categoria]?.emoji} {CATEGORIAS[modal.item.categoria]?.label}</span></div>
-            <label style={S.label}>TIPO</label>
-            <div style={{display:'flex',gap:8,marginBottom:16}}>
-              {['entrada','saida'].map(t=>(
-                <button key={t} style={{flex:1,padding:12,background:form.tipo===t?(t==='entrada'?'#2C3E2D':'#C0392B'):'#F5F0E8',color:form.tipo===t?'#FDFCF9':'#1E2B1F',border:'none',borderRadius:10,fontFamily:'DM Sans,sans-serif',fontSize:14,fontWeight:500,cursor:'pointer'}} onClick={()=>setForm(f=>({...f,tipo:t}))}>
-                  {t==='entrada'?'↑ Entrada':'↓ Saída'}
-                </button>
-              ))}
-            </div>
-            <label style={S.label}>QUANTIDADE ({modal.item.unidade}) *</label>
-            <input type="number" min="1" style={{...S.inp,marginBottom:12}} value={form.qtd||''} onChange={e=>setForm(f=>({...f,qtd:e.target.value}))} />
-            <label style={S.label}>RESPONSÁVEL *</label>
-            <input style={{...S.inp,marginBottom:12}} placeholder="Nome de quem retirou/adicionou" value={form.responsavel||''} onChange={e=>setForm(f=>({...f,responsavel:e.target.value}))} />
-            <label style={S.label}>OBSERVAÇÃO</label>
-            <input style={{...S.inp,marginBottom:20}} placeholder="Ex: Projeto Residencial Jardins" value={form.obs||''} onChange={e=>setForm(f=>({...f,obs:e.target.value}))} />
-            <div style={{display:'flex',gap:10}}>
-              <button style={{...S.btnSec(),flex:1,padding:14}} onClick={()=>setModal(null)}>Cancelar</button>
-              <button style={{...S.btnPrim,flex:2}} onClick={registrarMovimento}>Confirmar</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* MODAL NOVO ITEM */}
-      {modal?.tipo==='addItem' && (
-        <div style={S.overlay} onClick={()=>setModal(null)}>
-          <div style={S.modal} onClick={e=>e.stopPropagation()}>
-            <div style={{fontSize:17,fontWeight:600,color:'#2C3E2D',marginBottom:18}}>Novo item</div>
-            <label style={S.label}>NOME *</label>
-            <input style={{...S.inp,marginBottom:12}} value={novoItem.nome} onChange={e=>setNovoItem(n=>({...n,nome:e.target.value}))} />
-            <label style={S.label}>CATEGORIA</label>
-            <select style={{...S.sel,marginBottom:12}} value={novoItem.categoria} onChange={e=>setNovoItem(n=>({...n,categoria:e.target.value}))}>
-              {Object.entries(CATEGORIAS).map(([k,v])=><option key={k} value={k}>{v.emoji} {v.label}</option>)}
-            </select>
-            <label style={S.label}>UNIDADE</label>
-            <select style={{...S.sel,marginBottom:12}} value={novoItem.unidade} onChange={e=>setNovoItem(n=>({...n,unidade:e.target.value}))}>
-              {['UN','KG','L','M','M2','M3','SC','BAG','PC','par','cx','RL'].map(u=><option key={u} value={u}>{u}</option>)}
-            </select>
-            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:10,marginBottom:20}}>
-              <div><label style={S.label}>QTD INICIAL</label><input type="number" style={S.inp} value={novoItem.qtd} onChange={e=>setNovoItem(n=>({...n,qtd:e.target.value}))} /></div>
-              <div><label style={S.label}>MÍNIMO</label><input type="number" style={S.inp} value={novoItem.minimo} onChange={e=>setNovoItem(n=>({...n,minimo:e.target.value}))} /></div>
-              <div><label style={S.label}>PREÇO</label><input type="number" step="0.01" style={S.inp} value={novoItem.preco} onChange={e=>setNovoItem(n=>({...n,preco:e.target.value}))} /></div>
-            </div>
-            <div style={{display:'flex',gap:10}}>
-              <button style={{...S.btnSec(),flex:1,padding:14}} onClick={()=>setModal(null)}>Cancelar</button>
-              <button style={{...S.btnPrim,flex:2}} onClick={adicionarItem}>Adicionar</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* TOAST */}
-      {toast && (
-        <div style={{position:'fixed',bottom:90,left:'50%',transform:'translateX(-50%)',background:'#2C3E2D',color:'#FDFCF9',padding:'12px 20px',borderRadius:30,fontSize:13,fontWeight:500,zIndex:300,whiteSpace:'nowrap'}}>
-          {toast}
-        </div>
-      )}
-    </div>
-  );
+  } catch(e) { console.warn('Sheets:', e); }
 }
 
-ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(App));
+async function fbSalvarProjeto(p) {
+  try { await setDoc(doc(db,'projetos',String(p.id)),p); } catch(e){console.warn(e);}
+  enviarSheets('projeto', p);
+}
+async function fbSalvarRegistro(r) {
+  try { await setDoc(doc(db,'registros',String(r.id)),r); } catch(e){console.warn(e);}
+  enviarSheets('registro', r);
+}
+async function fbSalvarMeta(m) {
+  try { await setDoc(doc(db,'metas',String(m.id)),m); } catch(e){console.warn(e);}
+  enviarSheets('meta', m);
+}
+async function fbSalvarCronograma(c) {
+  try { await setDoc(doc(db,'cronograma',String(c.id)),c); } catch(e){console.warn(e);}
+}
+async function fbSalvarDispensa(d) {
+  try { await setDoc(doc(db,'dispensas',String(d.id)),d); } catch(e){console.warn(e);}
+}
+async function fbDeletar(col,id) { try { await deleteDoc(doc(db,col,String(id))); } catch(e){console.warn(e);} }
+async function fbAtualizarProjeto(id,dados) { try { await updateDoc(doc(db,'projetos',String(id)),dados); } catch(e){console.warn(e);} }
+
+function iniciarListeners() {
+  onSnapshot(collection(db,'projetos'), snap => { projetos = snap.docs.map(d=>d.data()); renderDash(); renderProjetos(); renderMeta(); renderCampo(); });
+  onSnapshot(collection(db,'registros'), snap => { registros = snap.docs.map(d=>d.data()); renderDash(); renderRegistros(); });
+  onSnapshot(collection(db,'metas'), snap => { metas = snap.docs.map(d=>d.data()); renderDash(); renderMeta(); });
+  onSnapshot(collection(db,'cronograma'), snap => { cronograma = snap.docs.map(d=>d.data()); renderSemana(); });
+  onSnapshot(collection(db,'dispensas'), snap => { dispensas = snap.docs.map(d=>d.data()); renderDash(); });
+}
+
+// ===== CONSTANTES =====
+const CUSTO = {
+  gerente: 255.34, encarregado: 220.68, jardineiro: 172.11, diarista: 110,
+  vt: 11.5, equip: 43.76, veic_fixo: 72.89, km: 0.69
+};
+const EQUIPE_VALS = {Gerente: 255.34, Encarregado: 220.68, Jardineiro: 172.11, Diarista: 110};
+
+// ===== ESTADO =====
+let projetos = [];
+let registros = [];
+let metas = [];
+let cronograma = [];
+let dispensas = []; // dias dispensados do alerta de pendências
+let projCampo = null;
+function salvar() {}
+
+// ===== UTILS =====
+function toast(m) {
+  const t = document.getElementById('toast');
+  t.textContent = m; t.classList.add('v');
+  setTimeout(() => t.classList.remove('v'), 2500);
+}
+function hoje() { return new Date().toISOString().split('T')[0]; }
+function fmtData(s) { if (!s) return '—'; const [y,m,d]=s.split('-'); return `${d}/${m}/${y}`; }
+function fmtR(v) { return 'R$ ' + (v||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+function diasR(fim) { if (!fim) return null; return Math.ceil((new Date(fim)-new Date())/(86400000)); }
+function statusP(p) { if (p.progresso>=100) return 'completo'; const d=diasR(p.fim); if (d!==null&&d<0) return 'atrasado'; return ''; }
+
+function tipoLabel(t) {
+  const m = {execucao:'Execução',manutencao:'Manutenção',irrigacao:'Irrigação',lago:'Lago'};
+  return m[t] || t;
+}
+function tipoClass(t) {
+  const m = {execucao:'exec',manutencao:'man',irrigacao:'irrigacao',lago:'lago'};
+  return m[t] || '';
+}
+function custoAcumulado(projetoId) {
+  return registros.filter(r => r.projetoId === projetoId).reduce((s, r) => s + (r.custoTotal || 0), 0);
+}
+
+// ===== ABAS =====
+function mudarAba(aba, btn) {
+  document.querySelectorAll('.aba').forEach(a => a.classList.remove('ativo'));
+  document.querySelectorAll('.nb').forEach(b => b.classList.remove('ativo'));
+  document.getElementById('aba-'+aba).classList.add('ativo');
+  btn.classList.add('ativo');
+  if (aba==='dashboard') renderDash();
+  if (aba==='projetos') renderProjetos();
+  if (aba==='campo') { renderCampo(); renderRegistros(); }
+  if (aba==='semana') renderSemana();
+  if (aba==='registros') renderRegistros();
+  if (aba==='meta') renderMeta();
+}
+
+// ===== DATA =====
+function atualizarData() {
+  const a = new Date();
+  document.getElementById('dataAtual').textContent = a.toLocaleDateString('pt-BR',{weekday:'short',day:'2-digit',month:'2-digit'});
+}
+
+// ===== DASHBOARD =====
+// ===== PENDÊNCIAS DE PREENCHIMENTO =====
+let pendenciasExpandido = false;
+let dispensaPendente = null;
+
+function calcularPendencias() {
+  // Encontrar a data de início mais antiga entre projetos ativos
+  const projsAtivos = projetos.filter(p => p.progresso < 100 && p.inicio);
+  if (projsAtivos.length === 0) return { diasSemRegistro: [], diasSemMeta: [] };
+
+  const inicios = projsAtivos.map(p => p.inicio).filter(Boolean).sort();
+  const dataInicio = inicios[0];
+  if (!dataInicio) return { diasSemRegistro: [], diasSemMeta: [] };
+
+  const hojeStr = hoje();
+  const diasSemRegistro = [];
+  const diasSemMeta = [];
+
+  // Datas que já têm registro / meta
+  const datasComRegistro = new Set(registros.map(r => r.data));
+  const datasComMeta = new Set(metas.map(m => m.data));
+  // Dias dispensados (tipo 'registro' ou 'meta')
+  const registrosDispensados = new Set(dispensas.filter(d => d.tipo === 'registro').map(d => d.data));
+  const metasDispensadas = new Set(dispensas.filter(d => d.tipo === 'meta').map(d => d.data));
+
+  // Percorrer de dataInicio até ontem (não cobra hoje ainda)
+  let d = new Date(dataInicio + 'T12:00:00');
+  const limite = new Date(hojeStr + 'T12:00:00');
+
+  while (d < limite) {
+    const dow = d.getDay();
+    const ds = d.toISOString().split('T')[0];
+    // Só seg-sex (1 a 5)
+    if (dow >= 1 && dow <= 5) {
+      if (!datasComRegistro.has(ds) && !registrosDispensados.has(ds)) diasSemRegistro.push(ds);
+      if (!datasComMeta.has(ds) && !metasDispensadas.has(ds)) diasSemMeta.push(ds);
+    }
+    d.setDate(d.getDate() + 1);
+  }
+
+  return { diasSemRegistro, diasSemMeta };
+}
+
+function renderPendencias() {
+  const el = document.getElementById('d-pendencias');
+  if (!el) return;
+
+  const { diasSemRegistro, diasSemMeta } = calcularPendencias();
+  const total = diasSemRegistro.length + diasSemMeta.length;
+
+  if (total === 0) {
+    el.innerHTML = '';
+    return;
+  }
+
+  const listaDias = (arr, tipo) => arr.map(ds => {
+    const [y,m,d] = ds.split('-');
+    const dia = new Date(ds + 'T12:00:00');
+    const nomes = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+    return `<div style="font-size:12px;color:var(--txt);padding:4px 0;border-bottom:1px solid var(--bg);display:flex;justify-content:space-between;align-items:center">
+      <span>${nomes[dia.getDay()]} ${d}/${m}/${y}</span>
+      <span onclick="dispensarDia('${ds}','${tipo}')" style="color:var(--txts);cursor:pointer;font-size:14px;padding:0 4px" title="Dispensar">✕</span>
+    </div>`;
+  }).join('');
+
+  el.innerHTML = `
+    <div style="background:#FFF3E0;border:1px solid #F5C6A0;border-radius:14px;padding:16px;margin-bottom:20px">
+      <div style="display:flex;justify-content:space-between;align-items:center;cursor:pointer" onclick="togglePendencias()">
+        <div>
+          <div style="font-size:13px;font-weight:600;color:var(--alerta)">⚠ Preenchimentos pendentes</div>
+          <div style="font-size:12px;color:var(--txts);margin-top:3px">${diasSemRegistro.length} registros e ${diasSemMeta.length} metas não enviados</div>
+        </div>
+        <span style="font-size:14px;color:var(--alerta)">${pendenciasExpandido ? '▲' : '▼'}</span>
+      </div>
+      ${pendenciasExpandido ? `
+        <div style="margin-top:14px;display:grid;grid-template-columns:1fr 1fr;gap:14px">
+          <div>
+            <div style="font-size:11px;font-weight:600;color:var(--txts);letter-spacing:0.5px;text-transform:uppercase;margin-bottom:6px">Sem registro (${diasSemRegistro.length})</div>
+            ${diasSemRegistro.length ? listaDias(diasSemRegistro, 'registro') : '<div style="font-size:12px;color:var(--ok)">✓ Tudo em dia</div>'}
+          </div>
+          <div>
+            <div style="font-size:11px;font-weight:600;color:var(--txts);letter-spacing:0.5px;text-transform:uppercase;margin-bottom:6px">Sem meta (${diasSemMeta.length})</div>
+            ${diasSemMeta.length ? listaDias(diasSemMeta, 'meta') : '<div style="font-size:12px;color:var(--ok)">✓ Tudo em dia</div>'}
+          </div>
+        </div>
+        <div style="font-size:11px;color:var(--txts);margin-top:12px;line-height:1.4">💡 Preencha retroativamente em Campo ou Meta do Dia trocando a data, ou toque no ✕ para dispensar um dia que não precisa registro.</div>
+      ` : ''}
+    </div>`;
+}
+
+function dispensarDia(data, tipo) {
+  idParaApagar = `${tipo}_${data}`;
+  dispensaPendente = { id: `${tipo}_${data}`, data, tipo };
+  acaoPendente = 'executarDispensa';
+  document.getElementById('pin-input').value = '';
+  document.getElementById('pin-erro').style.display = 'none';
+  abrirModal('m-pin');
+}
+
+function executarDispensa() {
+  if (!dispensaPendente) return;
+  dispensas.push(dispensaPendente);
+  fbSalvarDispensa(dispensaPendente);
+  dispensaPendente = null;
+  renderPendencias();
+  toast('Dia dispensado');
+}
+
+function togglePendencias() {
+  pendenciasExpandido = !pendenciasExpandido;
+  renderPendencias();
+}
+
+function renderDash() {
+  renderPendencias();
+  const ativos = projetos.filter(p => p.progresso < 100);
+  const atrasados = projetos.filter(p => p.progresso < 100 && diasR(p.fim) !== null && diasR(p.fim) < 0);
+  const concluidos = projetos.filter(p => p.progresso >= 100);
+
+  document.getElementById('d-total').textContent = ativos.length;
+  document.getElementById('d-atrasados').textContent = atrasados.length;
+  document.getElementById('d-concluidos').textContent = concluidos.length;
+
+  // Equipe hoje — pega meta do dia se houver
+  const metaHoje = metas.filter(m => m.data === hoje()).slice(-1)[0];
+  if (metaHoje) {
+    const proj = projetos.find(p => p.id === metaHoje.projetoId);
+    document.getElementById('d-eq-local').textContent = proj ? proj.nome : 'Projeto não encontrado';
+    document.getElementById('d-eq-det').textContent = (metaHoje.equipe || []).join(', ') || '—';
+  } else if (ativos.length > 0) {
+    document.getElementById('d-eq-local').textContent = ativos[0].nome;
+    document.getElementById('d-eq-det').textContent = ativos[0].endereco || '—';
+  } else {
+    document.getElementById('d-eq-local').textContent = 'Nenhum projeto ativo';
+    document.getElementById('d-eq-det').textContent = '—';
+  }
+
+  // Projetos com custos
+  const lista = document.getElementById('d-projetos');
+  if (ativos.length === 0) {
+    lista.innerHTML = '<div class="vazio"><div class="vi">🌱</div><div>Nenhum projeto ativo</div></div>';
+  } else {
+    lista.innerHTML = ativos.map(p => {
+      const st = statusP(p);
+      const d = diasR(p.fim);
+      const dTxt = d === null ? '' : d < 0
+        ? `<span style="color:var(--erro)">⚠ ${Math.abs(d)}d em atraso</span>`
+        : `${d}d restantes`;
+      const acum = custoAcumulado(p.id);
+      const prev = parseFloat(p.custoPrevisto) || 0;
+      const pctCusto = prev > 0 ? Math.min(100, Math.round(acum/prev*100)) : null;
+      const sobreCusto = prev > 0 && acum > prev;
+      return `
+      <div class="pcard">
+        <div class="pch">
+          <div class="pnome">${p.nome}</div>
+          <span class="ptag ${tipoClass(p.tipo)}">${tipoLabel(p.tipo)}</span>
+        </div>
+        <div class="plbl"><span>Conclusão</span><span>${p.progresso||0}%</span></div>
+        <div class="ptrilha"><div class="pbarra ${st}" style="width:${p.progresso||0}%"></div></div>
+        <div class="pmeta" style="margin-top:6px">${dTxt}</div>
+        <div class="custo-grid" style="margin-top:12px">
+          <div class="custo-item"><div class="custo-lbl">Custo previsto</div><div class="custo-val">${prev > 0 ? fmtR(prev) : '—'}</div></div>
+          <div class="custo-item ${sobreCusto?'alerta':''}"><div class="custo-lbl">Custo realizado</div><div class="custo-val">${fmtR(acum)}</div></div>
+          ${pctCusto !== null ? `<div class="custo-item destaque" style="grid-column:1/-1"><div class="custo-lbl">Orçamento consumido</div><div class="custo-val">${pctCusto}%${sobreCusto?' ⚠ Acima do orçamento':''}</div></div>` : ''}
+        </div>
+        <div class="acoes">
+          <button class="btn-acao" onclick="verDetalhes('${p.id}')">Detalhes</button>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  // Meta do dia
+  const md = document.getElementById('d-meta-hoje');
+  if (!metaHoje) {
+    md.innerHTML = '<div style="font-size:13px;color:var(--txts);background:var(--branco);border-radius:12px;padding:14px;border:1px solid var(--bge)">Nenhuma meta publicada hoje. Vá em "Meta do Dia" para planejar.</div>';
+  } else {
+    const proj = projetos.find(p => p.id === metaHoje.projetoId);
+    md.innerHTML = `
+    <div class="md-card">
+      <div class="md-header">
+        <div><div class="md-projeto">${proj ? proj.nome : '—'}</div><div class="md-equipe">👥 ${(metaHoje.equipe||[]).join(', ')}</div></div>
+        <span class="ptag exec">${metaHoje.tarefas ? metaHoje.tarefas.length : 0} tarefas</span>
+      </div>
+      ${(metaHoje.tarefas||[]).map(t=>`<div class="md-tarefa">${t}</div>`).join('')}
+      ${metaHoje.obs ? `<div class="md-obs">📝 ${metaHoje.obs}</div>` : ''}
+    </div>`;
+  }
+
+  // Registros de campo de hoje
+  const rd = document.getElementById('d-registros-hoje');
+  const regsHoje = registros.filter(r => r.data === hoje());
+  if (regsHoje.length === 0) {
+    rd.innerHTML = '<div style="font-size:13px;color:var(--txts);background:var(--branco);border-radius:12px;padding:14px;border:1px solid var(--bge)">Nenhum registro de campo hoje ainda.</div>';
+  } else {
+    rd.innerHTML = regsHoje.map(r => {
+      const proj = projetos.find(p => p.id === r.projetoId);
+      const feitas = (r.tarefas||[]).filter(t=>t.feita).length;
+      const total = (r.tarefas||[]).length;
+      return `
+      <div class="meta-card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+          <div style="font-size:14px;font-weight:600;color:var(--vd)">${proj?proj.nome:'—'}</div>
+          <span class="badge verde">${feitas}/${total} tarefas</span>
+        </div>
+        <div class="custo-grid">
+          <div class="custo-item"><div class="custo-lbl">Custo do dia</div><div class="custo-val">${fmtR(r.custoTotal)}</div></div>
+          <div class="custo-item"><div class="custo-lbl">Progresso</div><div class="custo-val">${r.progresso||0}%</div></div>
+        </div>
+        ${r.ocorrencia ? `<div style="font-size:12px;color:var(--erro);margin-top:8px;background:#FDEDEC;border-radius:8px;padding:8px">⚠ ${r.ocorrencia}</div>` : ''}
+        <div class="acoes-gestor">
+          <button class="btn-gestor" onclick="abrirEditarRegistro('${r.id}')">✏️ Editar</button>
+          <button class="btn-gestor del" onclick="apagarRegistro('${r.id}')">🗑 Apagar</button>
+        </div>
+      </div>`;
+    }).join('');
+  }
+}
+
+// ===== PROJETOS =====
+function renderProjetos() {
+  const lista = document.getElementById('p-lista');
+  if (projetos.length === 0) {
+    lista.innerHTML = '<div class="vazio"><div class="vi">🌿</div><div>Adicione seu primeiro projeto</div></div>';
+    return;
+  }
+  lista.innerHTML = projetos.map(p => {
+    const st = statusP(p);
+    const acum = custoAcumulado(p.id);
+    const prev = parseFloat(p.custoPrevisto) || 0;
+    const sobreCusto = prev > 0 && acum > prev;
+    return `
+    <div class="pcard">
+      <div class="pch">
+        <div class="pnome">${p.nome}</div>
+        <span class="ptag ${tipoClass(p.tipo)}">${tipoLabel(p.tipo)}</span>
+      </div>
+      <div class="plbl"><span>${p.endereco||'—'}</span><span>${p.progresso||0}%</span></div>
+      <div class="ptrilha"><div class="pbarra ${st}" style="width:${p.progresso||0}%"></div></div>
+      <div class="custo-grid" style="margin-top:10px">
+        <div class="custo-item"><div class="custo-lbl">Previsto</div><div class="custo-val">${prev>0?fmtR(prev):'—'}</div></div>
+        <div class="custo-item ${sobreCusto?'alerta':''}"><div class="custo-lbl">Realizado</div><div class="custo-val">${fmtR(acum)}</div></div>
+        ${p.valorContrato ? `<div class="custo-item destaque" style="grid-column:1/-1"><div class="custo-lbl">Valor do contrato</div><div class="custo-val">${fmtR(parseFloat(p.valorContrato))}</div></div>` : ''}
+      </div>
+      <div class="acoes">
+        <button class="btn-acao" onclick="verDetalhes('${p.id}')">Ver detalhes</button>
+        <button class="btn-acao" onclick="confirmarPINProjeto('${p.id}')">✏️ Editar</button>
+        <button class="btn-acao p" onclick="if(confirm('Arquivar?')){fbDeletar('projetos','${p.id}');projetos=projetos.filter(x=>x.id!=='${p.id}');salvar();renderProjetos();toast('Arquivado');}">Arquivar</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function abrirModal(id) { document.getElementById(id).classList.add('aberto'); }
+function fecharModal(id) { document.getElementById(id).classList.remove('aberto'); }
+
+function salvarProjeto() {
+  const nome = document.getElementById('pj-nome').value.trim();
+  if (!nome) { toast('Informe o nome'); return; }
+  const p = {
+    id: Date.now().toString(),
+    nome, tipo: document.getElementById('pj-tipo').value,
+    endereco: document.getElementById('pj-end').value.trim(),
+    inicio: document.getElementById('pj-ini').value,
+    fim: document.getElementById('pj-fim').value,
+    custoPrevisto: document.getElementById('pj-custo-prev').value,
+    valorContrato: document.getElementById('pj-contrato').value,
+    tarefas: document.getElementById('pj-tarefas').value.trim().split('\n').filter(t=>t.trim()),
+    obs: document.getElementById('pj-obs').value.trim(),
+    progresso: 0
+  };
+  projetos.push(p);
+  salvar();
+  fbSalvarProjeto(p);
+  fecharModal('m-projeto');
+  renderProjetos();
+  toast('Projeto cadastrado ✓');
+  ['pj-nome','pj-end','pj-ini','pj-fim','pj-custo-prev','pj-contrato','pj-tarefas','pj-obs'].forEach(id => document.getElementById(id).value='');
+}
+
+function verDetalhes(id) {
+  const p = projetos.find(x => x.id === id);
+  if (!p) return;
+  document.getElementById('det-tit').textContent = p.nome;
+  const acum = custoAcumulado(id);
+  const prev = parseFloat(p.custoPrevisto) || 0;
+  const regs = registros.filter(r => r.projetoId === id).slice(-5).reverse();
+
+  const histHtml = regs.length === 0
+    ? '<p style="font-size:13px;color:var(--txts)">Nenhum registro ainda</p>'
+    : regs.map(r=>`
+      <div style="border-left:3px solid var(--vc);padding:8px 12px;margin-bottom:8px;background:var(--bg);border-radius:0 8px 8px 0">
+        <div style="font-size:11px;color:var(--txts);margin-bottom:4px">${fmtData(r.data)} · ${fmtR(r.custoTotal)}</div>
+        <div style="font-size:12px;color:var(--txts)">👥 ${(r.equipe||[]).join(', ')}</div>
+        ${(r.tarefas||[]).filter(t=>t.feita).map(t=>`<div style="font-size:13px">✓ ${t.texto}</div>`).join('')}
+        ${r.ocorrencia?`<div style="font-size:12px;color:var(--erro);margin-top:4px">⚠ ${r.ocorrencia}</div>`:''}
+      </div>`).join('');
+
+  document.getElementById('det-corpo').innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px">
+      <div><div style="font-size:11px;color:var(--txts)">Início</div><div style="font-size:14px;font-weight:500">${fmtData(p.inicio)}</div></div>
+      <div><div style="font-size:11px;color:var(--txts)">Previsão</div><div style="font-size:14px;font-weight:500">${fmtData(p.fim)}</div></div>
+    </div>
+    <div style="margin-bottom:16px">
+      <div class="plbl"><span>Conclusão</span><span>${p.progresso||0}%</span></div>
+      <div class="ptrilha"><div class="pbarra ${statusP(p)}" style="width:${p.progresso||0}%"></div></div>
+    </div>
+    <div class="custo-grid" style="margin-bottom:16px">
+      <div class="custo-item"><div class="custo-lbl">Custo previsto</div><div class="custo-val">${prev>0?fmtR(prev):'—'}</div></div>
+      <div class="custo-item ${prev>0&&acum>prev?'alerta':''}"><div class="custo-lbl">Custo realizado</div><div class="custo-val">${fmtR(acum)}</div></div>
+      ${p.valorContrato?`<div class="custo-item destaque"><div class="custo-lbl">Valor contrato</div><div class="custo-val">${fmtR(parseFloat(p.valorContrato))}</div></div>`:''}
+      ${prev>0?`<div class="custo-item"><div class="custo-lbl">Margem estimada</div><div class="custo-val" style="color:${parseFloat(p.valorContrato||0)-acum>0?'var(--ok)':'var(--erro)'}">
+        ${parseFloat(p.valorContrato||0)>0?fmtR(parseFloat(p.valorContrato)-acum):'—'}</div></div>`:''}
+    </div>
+    ${p.tarefas&&p.tarefas.length?`<div style="margin-bottom:16px"><div class="stit">Escopo</div>${p.tarefas.map(t=>`<div style="font-size:13px;padding:5px 0;border-bottom:1px solid var(--bg)">· ${t}</div>`).join('')}</div>`:''}
+    ${p.obs?`<div style="margin-bottom:16px;background:var(--bg);padding:12px;border-radius:10px;font-size:13px;color:var(--txts)">${p.obs}</div>`:''}
+    <div class="stit">Histórico de campo</div>
+    ${histHtml}
+  `;
+  abrirModal('m-detalhe');
+}
+
+// ===== META DO DIA =====
+function renderMeta() {
+  // Preencher data com hoje por padrão
+  const dataInp = document.getElementById('meta-data');
+  if (dataInp && !dataInp.value) dataInp.value = hoje();
+  // Preencher select de projetos
+  const sel = document.getElementById('meta-projeto');
+  sel.innerHTML = '<option value="">— Selecionar projeto —</option>';
+  projetos.filter(p => p.progresso < 100).forEach(p => {
+    const o = document.createElement('option');
+    o.value = p.id; o.textContent = p.nome;
+    sel.appendChild(o);
+  });
+
+  // Histórico
+  const hist = document.getElementById('meta-historico');
+  const recentes = [...metas].reverse().slice(0, 7);
+  if (recentes.length === 0) {
+    hist.innerHTML = '<div style="font-size:13px;color:var(--txts)">Nenhuma meta registrada ainda.</div>';
+  } else {
+    hist.innerHTML = recentes.map(m => {
+      const proj = projetos.find(p => p.id === m.projetoId);
+      const isHoje = m.data === hoje();
+      return `
+      <div class="md-card" style="${isHoje?'border:1.5px solid var(--vm)':''}">
+        <div class="md-header">
+          <div>
+            <div class="md-projeto">${proj ? proj.nome : '—'} ${isHoje?'<span class="badge verde">Hoje</span>':''}</div>
+            <div class="md-equipe">${fmtData(m.data)} · 👥 ${(m.equipe||[]).join(', ')}</div>
+          </div>
+        </div>
+        ${(m.tarefas||[]).map(t=>`<div class="md-tarefa">${t}</div>`).join('')}
+        ${m.obs?`<div class="md-obs">📝 ${m.obs}</div>`:''}
+        <div class="acoes-gestor">
+          <button class="btn-gestor" onclick="abrirEditarMeta('${m.id}')">✏️ Editar</button>
+          <button class="btn-gestor del" onclick="apagarMeta('${m.id}')">🗑 Apagar</button>
+        </div>
+      </div>`;
+    }).join('');
+  }
+}
+
+// ===== META DO DIA =====
+function confirmarProjetoMeta() {
+  const id = document.getElementById('meta-projeto').value;
+  if (!id) { toast('Selecione um projeto'); return; }
+  const proj = projetos.find(p => String(p.id) === String(id));
+  if (!proj) { setTimeout(confirmarProjetoMeta, 800); return; }
+  const conf = document.getElementById('meta-projeto-confirmado');
+  conf.textContent = '✓ ' + proj.nome;
+  conf.style.display = 'block';
+}
+
+function salvarMeta() {
+  const projetoId = document.getElementById('meta-projeto').value;
+  if (!projetoId) { toast('Selecione um projeto'); return; }
+  const proj = projetos.find(p => String(p.id) === String(projetoId));
+  if (!proj) { toast('Projeto não encontrado, tente novamente'); return; }
+  const equipe = [];
+  document.querySelectorAll('#meta-equipe-grid .eq-qtd').forEach(inp => {
+    const qtd = parseInt(inp.value) || 0;
+    if (qtd > 0) equipe.push(`${qtd}x ${inp.dataset.funcao}`);
+  });
+  if (equipe.length === 0) { toast('Informe pelo menos um membro da equipe'); return; }
+  const tarefasRaw = document.getElementById('meta-tarefas').value.trim();
+  if (!tarefasRaw) { toast('Adicione pelo menos uma tarefa'); return; }
+  const meta = {
+    id: Date.now().toString(),
+    data: document.getElementById('meta-data').value || hoje(),
+    projetoId,
+    equipe,
+    tarefas: tarefasRaw.split('\n').filter(t => t.trim()),
+    obs: document.getElementById('meta-obs').value.trim()
+  };
+  metas.push(meta);
+  salvar();
+  fbSalvarMeta({ ...meta, projetoNome: proj.nome });
+  toast('Meta publicada ✓');
+  document.getElementById('meta-projeto').value = '';
+  document.getElementById('meta-data').value = hoje();
+  document.getElementById('meta-projeto-confirmado').style.display = 'none';
+  document.getElementById('meta-tarefas').value = '';
+  document.getElementById('meta-obs').value = '';
+  document.querySelectorAll('#meta-equipe-grid .eq-qtd').forEach(inp => inp.value = '0');
+  renderMeta();
+}
+
+// ===== CAMPO =====
+function renderCampo() {
+  // Preencher data com hoje por padrão
+  const dataInp = document.getElementById('c-data');
+  if (dataInp && !dataInp.value) dataInp.value = hoje();
+
+  const sel = document.getElementById('c-select-proj');
+  if (!sel) return;
+  const valorAtual = sel.value; // preservar seleção atual
+  sel.innerHTML = '<option value="">— Selecionar projeto —</option>';
+  projetos.filter(p => p.progresso < 100).forEach(p => {
+    const o = document.createElement('option');
+    o.value = String(p.id); o.textContent = p.nome;
+    sel.appendChild(o);
+  });
+  // Restaurar seleção se ainda existir
+  if (valorAtual) sel.value = valorAtual;
+}
+
+function selecionarProjetoCampo() {
+  const id = document.getElementById('c-select-proj').value;
+  if (!id) {
+    document.getElementById('c-form').style.display = 'none';
+    document.getElementById('c-proj-nome').textContent = 'Selecione abaixo';
+    projCampo = null;
+    return;
+  }
+
+  // Tentar encontrar o projeto — comparar id como string e número
+  projCampo = projetos.find(p => String(p.id) === String(id)) || null;
+
+  // Se não encontrou ainda (Firebase ainda carregando), tentar de novo em 800ms
+  if (!projCampo) {
+    setTimeout(() => selecionarProjetoCampo(), 800);
+    return;
+  }
+
+  document.getElementById('c-proj-nome').textContent = projCampo.nome;
+  document.getElementById('c-prog-range').value = projCampo.progresso || 0;
+  document.getElementById('c-prog-val').textContent = (projCampo.progresso || 0) + '%';
+
+  // Preencher tarefas
+  const tDiv = document.getElementById('c-tarefas');
+  if (!projCampo.tarefas || projCampo.tarefas.length === 0) {
+    tDiv.innerHTML = '<div style="font-size:13px;color:var(--txts);padding:10px 0">Nenhuma tarefa cadastrada para este projeto</div>';
+  } else {
+    tDiv.innerHTML = projCampo.tarefas.map((t,i) => `
+      <div class="tarefa-item">
+        <input type="checkbox" class="tchk" id="ct-${i}">
+        <label class="ttxt" for="ct-${i}">${t}</label>
+      </div>`).join('');
+  }
+
+  // Resetar campos
+  document.querySelectorAll('#c-equipe-grid .eq-qtd').forEach(inp => inp.value = '0');
+  document.getElementById('c-veiculo').value = '';
+  document.getElementById('c-veiculo2').value = '';
+  document.getElementById('c-km').value = '0';
+  document.getElementById('c-km2').value = '0';
+  document.getElementById('c-marmitas').value = '0';
+  document.getElementById('c-extras-val').value = '0';
+
+  document.getElementById('c-form').style.display = 'block';
+  calcularCustoCampo();
+}
+
+function calcularCustoCampo() {
+  let mo = 0, vt = 0, totalPessoas = 0;
+  document.querySelectorAll('#c-equipe-grid .eq-qtd').forEach(inp => {
+    const qtd = parseInt(inp.value) || 0;
+    if (qtd > 0) {
+      mo += parseFloat(inp.dataset.diaria) * qtd;
+      vt += CUSTO.vt * qtd;
+      totalPessoas += qtd;
+    }
+  });
+
+  const marmitas = parseInt(document.getElementById('c-marmitas').value) || 0;
+  const vlrMarm = parseFloat(document.getElementById('c-vlr-marmita').value) || 0;
+  const ali = marmitas * vlrMarm;
+
+  const temVeic = document.getElementById('c-veiculo').value !== '';
+  const vfix = temVeic ? CUSTO.veic_fixo : 0;
+  const km = parseInt(document.getElementById('c-km').value) || 0;
+  const comb = km * CUSTO.km;
+
+  const temVeic2 = document.getElementById('c-veiculo2').value !== '';
+  const vfix2 = temVeic2 ? CUSTO.veic_fixo : 0;
+  const km2 = parseInt(document.getElementById('c-km2').value) || 0;
+  const comb2 = km2 * CUSTO.km;
+
+  const extras = parseFloat(document.getElementById('c-extras-val').value) || 0;
+  const total = mo + ali + vfix + comb + vfix2 + comb2 + CUSTO.equip + vt + extras;
+
+  document.getElementById('cp-mo').textContent = fmtR(mo);
+  document.getElementById('cp-ali').textContent = fmtR(ali);
+  document.getElementById('cp-vfix').textContent = fmtR(vfix + vfix2);
+  document.getElementById('cp-comb').textContent = fmtR(comb + comb2);
+  document.getElementById('cp-vt').textContent = fmtR(vt);
+  document.getElementById('cp-total').textContent = fmtR(total);
+}
+
+function registrarCampo() {
+  if (!projCampo) { toast('Selecione um projeto'); return; }
+  const equipe = [];
+  let mo = 0, vt = 0;
+  document.querySelectorAll('#c-equipe-grid .eq-qtd').forEach(inp => {
+    const qtd = parseInt(inp.value) || 0;
+    if (qtd > 0) {
+      equipe.push(`${qtd}x ${inp.dataset.funcao}`);
+      mo += parseFloat(inp.dataset.diaria) * qtd;
+      vt += CUSTO.vt * qtd;
+    }
+  });
+  if (equipe.length === 0) { toast('Informe a equipe presente'); return; }
+
+  const marmitas = parseInt(document.getElementById('c-marmitas').value)||0;
+  const vlrMarm = parseFloat(document.getElementById('c-vlr-marmita').value)||0;
+  const ali = marmitas * vlrMarm;
+  const temVeic = document.getElementById('c-veiculo').value !== '';
+  const vfix = temVeic ? CUSTO.veic_fixo : 0;
+  const km = parseInt(document.getElementById('c-km').value)||0;
+  const comb = km * CUSTO.km;
+  const temVeic2 = document.getElementById('c-veiculo2').value !== '';
+  const vfix2 = temVeic2 ? CUSTO.veic_fixo : 0;
+  const km2 = parseInt(document.getElementById('c-km2').value)||0;
+  const comb2 = km2 * CUSTO.km;
+  const extras = parseFloat(document.getElementById('c-extras-val').value)||0;
+  const custoTotal = mo + ali + vfix + comb + vfix2 + comb2 + CUSTO.equip + vt + extras;
+
+  const tarefas = (projCampo.tarefas||[]).map((t,i) => ({
+    texto: t, feita: document.getElementById('ct-'+i)?.checked || false
+  }));
+
+  const dataApontamento = document.getElementById('c-data').value || hoje();
+  const novoProgresso = parseInt(document.getElementById('c-prog-range').value);
+
+  const reg = {
+    id: Date.now().toString(),
+    projetoId: projCampo.id,
+    data: dataApontamento,
+    equipe,
+    tarefas,
+    ocorrencia: document.getElementById('c-ocorrencia').value.trim(),
+    veiculo: document.getElementById('c-veiculo').value,
+    km,
+    veiculo2: document.getElementById('c-veiculo2').value,
+    km2,
+    marmitas,
+    gastoExtra: extras,
+    gastoExtraDesc: document.getElementById('c-extras-desc').value.trim(),
+    progresso: novoProgresso,
+    custoMO: mo, custoAli: ali, custoVeic: vfix + comb,
+    custoEquip: CUSTO.equip, custoVT: vt, custoTotal
+  };
+
+  registros.push(reg);
+  const idx = projetos.findIndex(p => p.id === projCampo.id);
+  if (idx !== -1) projetos[idx].progresso = novoProgresso;
+  salvar();
+  fbSalvarRegistro({ ...reg, projetoNome: projCampo.nome });
+  fbAtualizarProjeto(projCampo.id, { progresso: novoProgresso });
+
+  // 🗓 CALENDÁRIO: se chegou em 100%, criar evento automaticamente via API
+  if (novoProgresso >= 100) {
+    const nomeProj = projCampo.nome;
+    const dtManutencao = new Date();
+    dtManutencao.setDate(dtManutencao.getDate() + 30);
+    const dtISO = dtManutencao.toISOString().split('T')[0];
+    agendarManutencao(nomeProj, dtISO);
+  }
+
+  toast('Registro enviado ✓');
+
+  document.getElementById('c-data').value = hoje();
+  document.getElementById('c-select-proj').value = '';
+  document.getElementById('c-form').style.display = 'none';
+  document.getElementById('c-proj-nome').textContent = 'Selecione abaixo';
+  document.getElementById('c-ocorrencia').value = '';
+  document.getElementById('c-extras-val').value = '0';
+  document.getElementById('c-extras-desc').value = '';
+  document.getElementById('c-marmitas').value = '0';
+  document.getElementById('c-km').value = '0';
+  document.getElementById('c-veiculo').value = '';
+  document.getElementById('c-km2').value = '0';
+  document.getElementById('c-veiculo2').value = '';
+  document.querySelectorAll('#c-equipe-grid .eq-qtd').forEach(inp => inp.value = '0');
+  projCampo = null;
+}
+
+// ===== SEMANA =====
+function renderSemana() {
+  const dias = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+  const grid = document.getElementById('semana-grid');
+  if (!grid) return;
+  const hojeStr = hoje();
+  const inicio = new Date();
+
+  let html = '';
+  let diasMostrados = 0;
+  let offset = 0;
+
+  // Mostrar 15 dias úteis (seg-sáb) a partir de hoje
+  while (diasMostrados < 15) {
+    const d = new Date(inicio);
+    d.setDate(inicio.getDate() + offset);
+    offset++;
+    const dow = d.getDay();
+    if (dow === 0) continue; // pula domingo
+
+    const ds = d.toISOString().split('T')[0];
+    const isHj = ds === hojeStr;
+
+    // Itens do cronograma manual neste dia
+    const itensCron = cronograma.filter(c => c.data === ds);
+    // Metas/registros automáticos
+    const metaDia = metas.filter(m => m.data === ds).slice(-1)[0];
+    const regsDia = registros.filter(r => r.data === ds);
+
+    let items = '';
+    itensCron.forEach(c => {
+      const cor = c.tipo === 'manual' ? 'var(--terra)' : 'var(--vm)';
+      const proj = c.tipo === 'projeto' ? (projetos.find(p => String(p.id) === String(c.projetoId)) || {}).nome : '';
+      const texto = c.tipo === 'manual' ? c.descricao : `${proj || ''}${c.tarefa ? ' — ' + c.tarefa : ''}`;
+      items += `<div class="cron-item" style="border-left:3px solid ${cor};display:flex;justify-content:space-between;align-items:center;gap:6px">
+        <span style="flex:1;cursor:pointer" onclick="abrirEditarCronograma('${c.id}')">${texto}</span>
+        <span style="cursor:pointer;color:var(--txts);font-size:13px" onclick="abrirEditarCronograma('${c.id}')">✏️</span>
+        <span style="cursor:pointer;color:var(--erro);font-size:13px" onclick="apagarCronograma('${c.id}')">✕</span>
+      </div>`;
+    });
+    regsDia.forEach(r => {
+      const feitas = (r.tarefas||[]).filter(t=>t.feita).length;
+      if (feitas > 0) items += `<div class="cron-item" style="border-left:3px solid var(--ok);background:#E8F4E8">✓ ${feitas} concluídas · ${fmtR(r.custoTotal)}</div>`;
+    });
+    if (!items) items = '<div style="font-size:12px;color:var(--bge);padding:4px 0">—</div>';
+
+    html += `
+    <div class="diacard ${isHj?'hoje':''}" style="margin-bottom:10px">
+      <div class="diah">
+        <span class="dianome">${dias[dow]} ${d.getDate().toString().padStart(2,'0')}/${(d.getMonth()+1).toString().padStart(2,'0')}${isHj?' · hoje':''}</span>
+        <button class="btn-gestor" onclick="abrirAddCronograma('${ds}')" style="font-size:18px;color:var(--vm)">＋</button>
+      </div>
+      ${items}
+    </div>`;
+    diasMostrados++;
+  }
+  grid.innerHTML = html;
+
+  const fim = new Date(inicio);
+  fim.setDate(inicio.getDate() + offset - 1);
+  document.getElementById('semana-tit').textContent =
+    `${inicio.getDate()}/${inicio.getMonth()+1} — ${fim.getDate()}/${fim.getMonth()+1}`;
+}
+
+// ===== CRONOGRAMA =====
+let cronTipoAtual = 'projeto';
+
+function abrirAddCronograma(dataPadrao) {
+  document.getElementById('cron-id').value = '';
+  document.getElementById('cron-modal-tit').textContent = 'Adicionar ao cronograma';
+  document.getElementById('cron-data').value = dataPadrao || hoje();
+  document.getElementById('cron-tarefa').value = '';
+  document.getElementById('cron-manual').value = '';
+  cronSelecionarTipo('projeto');
+  // Popular select de projetos
+  const sel = document.getElementById('cron-projeto');
+  sel.innerHTML = '<option value="">— Selecionar —</option>';
+  projetos.forEach(p => {
+    const o = document.createElement('option');
+    o.value = p.id; o.textContent = p.nome;
+    sel.appendChild(o);
+  });
+  abrirModal('m-cronograma');
+}
+
+function abrirEditarCronograma(id) {
+  const item = cronograma.find(c => c.id === id);
+  if (!item) return;
+  document.getElementById('cron-id').value = id;
+  document.getElementById('cron-modal-tit').textContent = 'Editar item do cronograma';
+  document.getElementById('cron-data').value = item.data;
+
+  // Popular select de projetos
+  const sel = document.getElementById('cron-projeto');
+  sel.innerHTML = '<option value="">— Selecionar —</option>';
+  projetos.forEach(p => {
+    const o = document.createElement('option');
+    o.value = p.id; o.textContent = p.nome;
+    if (String(p.id) === String(item.projetoId)) o.selected = true;
+    sel.appendChild(o);
+  });
+
+  if (item.tipo === 'projeto') {
+    cronSelecionarTipo('projeto');
+    document.getElementById('cron-tarefa').value = item.tarefa || '';
+    document.getElementById('cron-manual').value = '';
+  } else {
+    cronSelecionarTipo('manual');
+    document.getElementById('cron-manual').value = item.descricao || '';
+    document.getElementById('cron-tarefa').value = '';
+  }
+  abrirModal('m-cronograma');
+}
+
+function cronSelecionarTipo(tipo) {
+  cronTipoAtual = tipo;
+  const btnP = document.getElementById('cron-tipo-projeto');
+  const btnM = document.getElementById('cron-tipo-manual');
+  const blocoP = document.getElementById('cron-bloco-projeto');
+  const blocoM = document.getElementById('cron-bloco-manual');
+  if (tipo === 'projeto') {
+    btnP.style.background = 'var(--vd)'; btnP.style.color = 'var(--branco)';
+    btnM.style.background = 'var(--bg)'; btnM.style.color = 'var(--txt)';
+    blocoP.style.display = 'block'; blocoM.style.display = 'none';
+  } else {
+    btnM.style.background = 'var(--vd)'; btnM.style.color = 'var(--branco)';
+    btnP.style.background = 'var(--bg)'; btnP.style.color = 'var(--txt)';
+    blocoM.style.display = 'block'; blocoP.style.display = 'none';
+  }
+}
+
+function salvarCronograma() {
+  const data = document.getElementById('cron-data').value;
+  if (!data) { toast('Selecione a data'); return; }
+  const idExistente = document.getElementById('cron-id').value;
+  let item;
+  if (cronTipoAtual === 'projeto') {
+    const projetoId = document.getElementById('cron-projeto').value;
+    if (!projetoId) { toast('Selecione um projeto'); return; }
+    item = {
+      id: idExistente || Date.now().toString(),
+      data, tipo: 'projeto', projetoId,
+      tarefa: document.getElementById('cron-tarefa').value.trim()
+    };
+  } else {
+    const desc = document.getElementById('cron-manual').value.trim();
+    if (!desc) { toast('Informe a descrição'); return; }
+    item = { id: idExistente || Date.now().toString(), data, tipo: 'manual', descricao: desc };
+  }
+  if (idExistente) {
+    // Editar item existente
+    const idx = cronograma.findIndex(c => c.id === idExistente);
+    if (idx !== -1) cronograma[idx] = item;
+    toast('Item atualizado ✓');
+  } else {
+    cronograma.push(item);
+    toast('Adicionado ao cronograma ✓');
+  }
+  fbSalvarCronograma(item);
+  fecharModal('m-cronograma');
+  renderSemana();
+}
+
+function apagarCronograma(id) {
+  if (!confirm('Remover este item do cronograma?')) return;
+  fbDeletar('cronograma', id);
+  cronograma = cronograma.filter(c => c.id !== id);
+  renderSemana();
+  toast('Item removido');
+}
+
+// ===== PIN & GESTOR =====
+const PIN_GESTOR = '9033';
+let acaoPendente = null;
+
+function confirmarPIN(acao) {
+  acaoPendente = acao;
+  document.getElementById('pin-input').value = '';
+  document.getElementById('pin-erro').style.display = 'none';
+  abrirModal('m-pin');
+}
+
+function validarPIN() {
+  const pin = document.getElementById('pin-input').value;
+  if (pin !== PIN_GESTOR) {
+    document.getElementById('pin-erro').style.display = 'block';
+    return;
+  }
+  fecharModal('m-pin');
+  if (acaoPendente) { window[acaoPendente](); acaoPendente = null; }
+}
+
+// ===== EDITAR PROJETO =====
+function confirmarPINProjeto(id) {
+  acaoPendente = 'abrirModalEditProj';
+  idParaApagar = id; // reutilizar variável para guardar o id
+  document.getElementById('pin-input').value = '';
+  document.getElementById('pin-erro').style.display = 'none';
+  abrirModal('m-pin');
+}
+
+function abrirModalEditProj() {
+  const p = projetos.find(x => String(x.id) === String(idParaApagar));
+  if (!p) return;
+  document.getElementById('edit-proj-id').value = p.id;
+  document.getElementById('edit-proj-nome').value = p.nome || '';
+  document.getElementById('edit-proj-tipo').value = p.tipo || 'execucao';
+  document.getElementById('edit-proj-end').value = p.endereco || '';
+  document.getElementById('edit-proj-ini').value = p.inicio || '';
+  document.getElementById('edit-proj-fim').value = p.fim || '';
+  document.getElementById('edit-proj-custo').value = p.custoPrevisto || '';
+  document.getElementById('edit-proj-contrato').value = p.valorContrato || '';
+  document.getElementById('edit-proj-tarefas').value = (p.tarefas || []).join('\n');
+  document.getElementById('edit-proj-obs').value = p.obs || '';
+  abrirModal('m-edit-proj');
+}
+
+function salvarEdicaoProjeto() {
+  const id = document.getElementById('edit-proj-id').value;
+  const idx = projetos.findIndex(x => String(x.id) === String(id));
+  if (idx === -1) return;
+  const atualizado = {
+    ...projetos[idx],
+    nome: document.getElementById('edit-proj-nome').value.trim(),
+    tipo: document.getElementById('edit-proj-tipo').value,
+    endereco: document.getElementById('edit-proj-end').value.trim(),
+    inicio: document.getElementById('edit-proj-ini').value,
+    fim: document.getElementById('edit-proj-fim').value,
+    custoPrevisto: document.getElementById('edit-proj-custo').value,
+    valorContrato: document.getElementById('edit-proj-contrato').value,
+    tarefas: document.getElementById('edit-proj-tarefas').value.trim().split('\n').filter(t => t.trim()),
+    obs: document.getElementById('edit-proj-obs').value.trim()
+  };
+  projetos[idx] = atualizado;
+  fbSalvarProjeto(atualizado);
+  fecharModal('m-edit-proj');
+  renderProjetos();
+  renderDash();
+  toast('Projeto atualizado ✓');
+}
+
+// ===== EDITAR / APAGAR METAS =====
+function abrirEditarMeta(id) {
+  const m = metas.find(x => x.id === id);
+  if (!m) return;
+  document.getElementById('edit-meta-id').value = id;
+
+  // Preencher select projetos
+  const sel = document.getElementById('edit-meta-projeto');
+  sel.innerHTML = '';
+  projetos.forEach(p => {
+    const o = document.createElement('option');
+    o.value = p.id; o.textContent = p.nome;
+    if (p.id === m.projetoId) o.selected = true;
+    sel.appendChild(o);
+  });
+
+  // Preencher equipe — parsear "2x Jardineiro" etc
+  document.querySelectorAll('#edit-meta-equipe-grid .eq-qtd').forEach(inp => {
+    inp.value = 0;
+    (m.equipe || []).forEach(e => {
+      const match = e.match(/^(\d+)x (.+)$/);
+      if (match && match[2] === inp.dataset.funcao) inp.value = parseInt(match[1]);
+    });
+  });
+
+  document.getElementById('edit-meta-tarefas').value = (m.tarefas || []).join('\n');
+  document.getElementById('edit-meta-obs').value = m.obs || '';
+  fecharModal('m-edit-meta');
+  confirmarPIN('abrirModalEditMeta');
+}
+
+function abrirModalEditMeta() { abrirModal('m-edit-meta'); }
+
+function salvarEdicaoMeta() {
+  const id = document.getElementById('edit-meta-id').value;
+  const idx = metas.findIndex(x => x.id === id);
+  if (idx === -1) return;
+  const equipe = [];
+  document.querySelectorAll('#edit-meta-equipe-grid .eq-qtd').forEach(inp => {
+    const qtd = parseInt(inp.value) || 0;
+    if (qtd > 0) equipe.push(`${qtd}x ${inp.dataset.funcao}`);
+  });
+  metas[idx].projetoId = document.getElementById('edit-meta-projeto').value;
+  metas[idx].equipe = equipe;
+  metas[idx].tarefas = document.getElementById('edit-meta-tarefas').value.trim().split('\n').filter(t => t.trim());
+  metas[idx].obs = document.getElementById('edit-meta-obs').value.trim();
+  const projMeta = projetos.find(p => String(p.id) === String(metas[idx].projetoId));
+  metas[idx].projetoNome = projMeta ? projMeta.nome : '';
+  salvar();
+  fbSalvarMeta(metas[idx]);
+  fecharModal('m-edit-meta');
+  renderMeta();
+  renderDash();
+  toast('Meta atualizada ✓');
+}
+
+let idParaApagar = null;
+let tipoParaApagar = null;
+
+function apagarMeta(id) {
+  idParaApagar = id;
+  tipoParaApagar = 'meta';
+  document.getElementById('pin-input').value = '';
+  document.getElementById('pin-erro').style.display = 'none';
+  abrirModal('m-pin');
+  acaoPendente = 'executarApagar';
+}
+
+function apagarRegistro(id) {
+  idParaApagar = id;
+  tipoParaApagar = 'registro';
+  document.getElementById('pin-input').value = '';
+  document.getElementById('pin-erro').style.display = 'none';
+  abrirModal('m-pin');
+  acaoPendente = 'executarApagar';
+}
+
+function executarApagar() {
+  if (tipoParaApagar === 'meta') {
+    fbDeletar('metas', idParaApagar);
+    metas = metas.filter(x => x.id !== idParaApagar);
+    salvar(); renderMeta(); renderDash();
+    toast('Meta apagada');
+  } else if (tipoParaApagar === 'registro') {
+    fbDeletar('registros', idParaApagar);
+    registros = registros.filter(x => x.id !== idParaApagar);
+    salvar(); renderDash();
+    toast('Registro apagado');
+  }
+  idParaApagar = null;
+  tipoParaApagar = null;
+}
+function abrirEditarRegistro(id) {
+  const r = registros.find(x => x.id === id);
+  if (!r) return;
+  document.getElementById('edit-reg-id').value = id;
+  document.getElementById('edit-reg-data').value = r.data || '';
+  document.getElementById('edit-reg-ocorrencia').value = r.ocorrencia || '';
+  document.getElementById('edit-reg-extras').value = r.gastoExtra || 0;
+  document.getElementById('edit-reg-extras-desc').value = r.gastoExtraDesc || '';
+  document.getElementById('edit-reg-progresso').value = r.progresso || 0;
+  confirmarPIN('abrirModalEditReg');
+}
+
+function abrirModalEditReg() { abrirModal('m-edit-reg'); }
+
+function salvarEdicaoRegistro() {
+  const id = document.getElementById('edit-reg-id').value;
+  const idx = registros.findIndex(x => x.id === id);
+  if (idx === -1) return;
+  registros[idx].data = document.getElementById('edit-reg-data').value;
+  registros[idx].ocorrencia = document.getElementById('edit-reg-ocorrencia').value.trim();
+  registros[idx].gastoExtra = parseFloat(document.getElementById('edit-reg-extras').value) || 0;
+  registros[idx].gastoExtraDesc = document.getElementById('edit-reg-extras-desc').value.trim();
+  registros[idx].progresso = parseInt(document.getElementById('edit-reg-progresso').value) || 0;
+  salvar();
+  fbSalvarRegistro(registros[idx]);
+  fecharModal('m-edit-reg');
+  renderDash();
+  toast('Registro atualizado ✓');
+}
+
+// ===== REGISTROS =====
+function renderRegistros() {
+  // Popular filtro de projetos
+  const sel = document.getElementById('reg-filtro-proj');
+  if (sel) {
+    const projetosComReg = [...new Set(registros.map(r => r.projetoId))];
+    const valorAtual = sel.value;
+    sel.innerHTML = '<option value="">Todos os projetos</option>';
+    projetosComReg.forEach(pid => {
+      const proj = projetos.find(p => String(p.id) === String(pid));
+      if (proj) {
+        const o = document.createElement('option');
+        o.value = pid; o.textContent = proj.nome;
+        if (String(pid) === String(valorAtual)) o.selected = true;
+        sel.appendChild(o);
+      }
+    });
+  }
+
+  const filtroProj = sel ? sel.value : '';
+  const lista = document.getElementById('registros-lista');
+  if (!lista) return;
+
+  const regsFiltrados = [...registros]
+    .filter(r => !filtroProj || String(r.projetoId) === String(filtroProj))
+    .sort((a, b) => (b.data || '').localeCompare(a.data || ''));
+
+  if (regsFiltrados.length === 0) {
+    lista.innerHTML = '<div class="vazio"><div class="vi">📋</div><div>Nenhum registro encontrado</div></div>';
+    return;
+  }
+
+  lista.innerHTML = regsFiltrados.map(r => {
+    const proj = projetos.find(p => String(p.id) === String(r.projetoId));
+    const tarefasFeitas = (r.tarefas || []).filter(t => t.feita);
+    const tarefasTotal = (r.tarefas || []).length;
+    return `
+    <div class="pcard" style="border-left:3px solid ${r.ocorrencia ? 'var(--erro)' : 'var(--vc)'}">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">
+        <div>
+          <div style="font-size:15px;font-weight:600;color:var(--vd)">${proj ? proj.nome : '—'}</div>
+          <div style="font-size:11px;color:var(--txts);margin-top:2px">${fmtData(r.data)} · 👥 ${(r.equipe||[]).join(', ')}</div>
+        </div>
+        <span style="font-family:'DM Mono',monospace;font-size:11px;background:var(--bge);padding:3px 8px;border-radius:20px">${r.progresso||0}%</span>
+      </div>
+      ${tarefasFeitas.length > 0 ? `
+        <div style="margin-bottom:10px">
+          <div style="font-size:10px;color:var(--txts);letter-spacing:1px;text-transform:uppercase;margin-bottom:4px">Atividades realizadas</div>
+          ${tarefasFeitas.map(t => `<div style="font-size:12px;color:var(--txt);padding:3px 0;border-bottom:1px solid var(--bg);display:flex;align-items:center;gap:6px"><span style="color:var(--ok)">✓</span>${t.texto||t}</div>`).join('')}
+        </div>` : ''}
+      <div class="custo-grid" style="margin-bottom:10px">
+        <div class="custo-item"><div class="custo-lbl">Custo do dia</div><div class="custo-val">${fmtR(r.custoTotal)}</div></div>
+        <div class="custo-item"><div class="custo-lbl">Veículo</div><div class="custo-val">${r.veiculo||'—'}${r.veiculo2?'+'+r.veiculo2:''}</div></div>
+      </div>
+      ${r.ocorrencia ? `<div style="font-size:12px;color:var(--erro);background:#FDEDEC;border-radius:8px;padding:8px;margin-bottom:10px">⚠ ${r.ocorrencia}</div>` : ''}
+      <div class="acoes">
+        <button class="btn-acao" onclick="abrirEditarRegistro('${r.id}')">✏️ Editar</button>
+        <button class="btn-acao" style="color:var(--erro)" onclick="apagarRegistro('${r.id}')">🗑 Apagar</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ===== GOOGLE CALENDAR API =====
+const GCAL_CLIENT_ID = '1042863056704-r8jb5uasrt3piqkh07fre2uqkm6eps71.apps.googleusercontent.com';
+const GCAL_SCOPE = 'https://www.googleapis.com/auth/calendar.events';
+const GCAL_TARGET = 'contato@indoorplantas.com.br';
+
+function agendarManutencao(nomeProj, dataISO) {
+  // Carregar o Google Identity Services se ainda não carregou
+  if (!window.google || !window.google.accounts) {
+    const script = document.createElement('script');
+    script.src = 'https://accounts.google.com/gsi/client';
+    script.onload = () => agendarManutencao(nomeProj, dataISO);
+    document.head.appendChild(script);
+    return;
+  }
+
+  const client = window.google.accounts.oauth2.initTokenClient({
+    client_id: GCAL_CLIENT_ID,
+    scope: GCAL_SCOPE,
+    callback: async (resp) => {
+      if (resp.error) { console.warn('Auth erro:', resp.error); return; }
+      try {
+        const evento = {
+          summary: `🌿 Manutenção de Entrega — ${nomeProj}`,
+          description: 'Manutenção de entrega programada automaticamente pelo Hub de Execução INDOOR.',
+          start: { date: dataISO },
+          end:   { date: dataISO },
+          reminders: {
+            useDefault: false,
+            overrides: [
+              { method: 'email',  minutes: 24 * 60 },
+              { method: 'popup',  minutes: 60 }
+            ]
+          }
+        };
+        const res = await fetch(
+          `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(GCAL_TARGET)}/events`,
+          {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${resp.access_token}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(evento)
+          }
+        );
+        if (res.ok) {
+          const [y,m,d] = dataISO.split('-');
+          toast(`🗓 Manutenção agendada para ${d}/${m}/${y} ✓`);
+        } else {
+          console.warn('Erro Calendar:', await res.text());
+          toast('⚠ Erro ao agendar — verifique o console');
+        }
+      } catch(e) {
+        console.warn(e);
+      }
+    }
+  });
+  client.requestAccessToken();
+}
+
+// ===== EXPOR FUNÇÕES GLOBALMENTE =====
+window.mudarAba = mudarAba;
+window.abrirModal = abrirModal;
+window.fecharModal = fecharModal;
+window.salvarProjeto = salvarProjeto;
+window.verDetalhes = verDetalhes;
+window.togglePendencias = togglePendencias;
+window.dispensarDia = dispensarDia;
+window.executarDispensa = executarDispensa;
+window.renderRegistros = renderRegistros;
+window.abrirAddCronograma = abrirAddCronograma;
+window.abrirEditarCronograma = abrirEditarCronograma;
+window.cronSelecionarTipo = cronSelecionarTipo;
+window.salvarCronograma = salvarCronograma;
+window.apagarCronograma = apagarCronograma;
+window.confirmarProjetoMeta = confirmarProjetoMeta;
+window.salvarMeta = salvarMeta;
+window.selecionarProjetoCampo = selecionarProjetoCampo;
+window.calcularCustoCampo = calcularCustoCampo;
+window.registrarCampo = registrarCampo;
+window.confirmarPIN = confirmarPIN;
+window.validarPIN = validarPIN;
+window.abrirEditarMeta = abrirEditarMeta;
+window.abrirModalEditMeta = abrirModalEditMeta;
+window.salvarEdicaoMeta = salvarEdicaoMeta;
+window.apagarMeta = apagarMeta;
+window.abrirEditarRegistro = abrirEditarRegistro;
+window.abrirModalEditReg = abrirModalEditReg;
+window.salvarEdicaoRegistro = salvarEdicaoRegistro;
+window.apagarRegistro = apagarRegistro;
+window.executarApagar = executarApagar;
+window.confirmarPINProjeto = confirmarPINProjeto;
+window.abrirModalEditProj = abrirModalEditProj;
+window.salvarEdicaoProjeto = salvarEdicaoProjeto;
+window.fbDeletar = fbDeletar;
+window.agendarManutencao = agendarManutencao;
+
+// ===== INIT =====
+atualizarData();
+iniciarListeners();
 </script>
 </body>
 </html>
