@@ -25,7 +25,7 @@
 </head>
 <body>
 <div id="root"></div>
-<script type="text/babel">
+<script type="text/plain" id="estoque-app-source">
 const { useState, useMemo, useEffect } = React;
 
 // ===== FIREBASE =====
@@ -752,6 +752,23 @@ function App() {
 }
 
 ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(App));
+</script>
+<script>
+  // Transformação manual do JSX forçando runtime clássico (React.createElement),
+  // evitando que o Babel injete "import" automático (automatic JSX runtime),
+  // que quebra fora de um <script type="module">.
+  (function() {
+    const codigoFonte = document.getElementById('estoque-app-source').textContent;
+    const resultado = Babel.transform(codigoFonte, {
+      presets: [
+        ['react', { runtime: 'classic' }],
+        'env'
+      ]
+    }).code;
+    const novoScript = document.createElement('script');
+    novoScript.textContent = resultado;
+    document.body.appendChild(novoScript);
+  })();
 </script>
 </body>
 </html>
